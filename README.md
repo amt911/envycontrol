@@ -316,7 +316,7 @@ The below files are created by `envycontrol`, and you may want to remove them ma
 
 ## 🛠️ Development
 
-Repository contributors and coding agents should read `CLAUDE.md` (or the byte-identical `AGENTS.md`) before changing behavior. The project-specific contracts and prompt library live under `docs/`.
+Repository contributors and coding agents should read `AGENTS.md` (Claude Code reads it too, through the one-line `CLAUDE.md` import) before changing behavior. The project-specific contracts and prompt library live under `docs/`.
 
 ```sh
 python -m pip install -e .

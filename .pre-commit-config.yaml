@@ -26,9 +26,9 @@ repos:
         language: system
         types: [python]
         stages: [pre-commit]
-      - id: agent-docs-identical
-        name: CLAUDE.md and AGENTS.md are identical
-        entry: bash -c 'cmp -s CLAUDE.md AGENTS.md'
+      - id: agent-docs-shim
+        name: CLAUDE.md only imports AGENTS.md
+        entry: bash -c 'grep -qx "@AGENTS.md" CLAUDE.md && ! grep -q "^## " CLAUDE.md'
         language: system
         pass_filenames: false
         always_run: true

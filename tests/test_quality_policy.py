@@ -29,7 +29,7 @@ def test_precommit_covers_whitespace_yaml_markdown_and_project_gates():
         "https://github.com/igorshubovych/markdownlint-cli",
         "id: markdownlint",
         "id: ruff",
-        "id: agent-docs-identical",
+        "id: agent-docs-shim",
         "id: safety-tests",
         "id: pre-push-quality",
     )

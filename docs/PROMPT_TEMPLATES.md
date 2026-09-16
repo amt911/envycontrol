@@ -2,14 +2,14 @@
 
 These prompts turn the repository rules into reusable task briefs for coding agents. They are intentionally model-agnostic. Before using any template, replace the bracketed task-specific fields, then give the agent access to the repository and the target branch.
 
-Every prompt inherits `CLAUDE.md`/`AGENTS.md`. Those files are authoritative when this library and the repository disagree.
+Every prompt inherits `AGENTS.md` (Claude Code reads it too, through the `CLAUDE.md` import). It is authoritative when this library and the repository disagree.
 
 ## Rules shared by every implementation prompt
 
 Paste this block at the top of an implementation prompt when the receiving agent does not automatically read repository instructions:
 
 ```text
-Read CLAUDE.md first and obey it. Also read docs/CLI_CONTRACT.md,
+Read AGENTS.md first and obey it. Also read docs/CLI_CONTRACT.md,
 docs/COMMAND_PERMISSIONS.md, docs/FACTS.md, and docs/FINDINGS.md before changing
 behavior.
 
@@ -50,7 +50,7 @@ systemctl, hardware probes, or initramfs tools.
 Acceptance:
 - new/changed development logic has a RED test before implementation;
 - ordinary pytest needs no root, NVIDIA GPU, display manager, or initramfs tool;
-- CLAUDE.md and AGENTS.md remain byte-for-byte identical;
+- `AGENTS.md` stays the single source of truth; `CLAUDE.md` remains the one-line `@AGENTS.md` shim;
 - coverage does not fall below the configured 80% floor;
 - any destructive verification remains VM-only and fail-closed;
 - document verified facts, not assumed results, in docs/FACTS.md.
@@ -208,7 +208,7 @@ conflicting proposals, not agent confidence.
 ```text
 Task: verify the current EnvyControl PR as a reviewer, not as its implementer.
 
-Read the PR diff plus CLAUDE.md, docs/CLI_CONTRACT.md,
+Read the PR diff plus AGENTS.md, docs/CLI_CONTRACT.md,
 docs/COMMAND_PERMISSIONS.md, docs/FACTS.md, and docs/FINDINGS.md. Run
 scripts/verify/verify-pr.sh for safe deterministic checks. Review changed behavior
 for missing regression tests, unintended root/system effects, contract drift,
