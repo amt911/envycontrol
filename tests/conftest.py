@@ -26,6 +26,15 @@ DANGEROUS_RUN_COMMANDS = {
     "rpm-ostree",
     "make-initrd",
     "systemd-inhibit",
+    "booster",
+    "regenerate_images",
+    "kernel-install",
+    "ukify",
+    "limine",
+    "limine-update",
+    "limine-entry-tool",
+    "limine-dracut",
+    "limine-mkinitcpio",
     "chmod",
 }
 
