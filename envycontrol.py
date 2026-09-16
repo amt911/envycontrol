@@ -5,7 +5,6 @@ import os
 import re
 import subprocess
 import sys
-import shutil
 from contextlib import contextmanager
 
 import envycontrol_boot as boot
@@ -231,8 +230,9 @@ RTD3_MODES = [0, 1, 2, 3]
 # end constants definition
 
 
-def graphics_mode_switcher(graphics_mode, user_display_manager, enable_force_comp, coolbits_value, rtd3_value, use_nvidia_current):
-    boot_plan = resolve_boot_rebuild_plan()
+def graphics_mode_switcher(graphics_mode, user_display_manager, enable_force_comp, coolbits_value, rtd3_value, use_nvidia_current, boot_plan=None):
+    if boot_plan is None:
+        boot_plan = resolve_boot_rebuild_plan()
     print(f"Switching to {graphics_mode} mode")
 
     if graphics_mode == 'integrated':
@@ -354,10 +354,7 @@ def graphics_mode_switcher(graphics_mode, user_display_manager, enable_force_com
                         generate_xrandr_script(igpu_vendor), True)
             create_file(LIGHTDM_CONFIG_PATH, LIGHTDM_CONFIG_CONTENT)
 
-    boot_plan.execute(
-        boot.SubprocessCommandRunner(),
-        verbose=logging.getLogger().level == logging.DEBUG,
-    )
+    execute_boot_rebuild_plan(boot_plan)
     print('Operation completed successfully')
     print('Please reboot your computer for changes to take effect!')
 
@@ -492,15 +489,20 @@ def resolve_boot_rebuild_plan():
     return boot.default_boot_rebuild_coordinator().resolve(probe)
 
 
-
-def rebuild_initramfs():
-    plan = resolve_boot_rebuild_plan()
-    print('Rebuilding boot artifacts...')
+def execute_boot_rebuild_plan(plan):
     plan.execute(
         boot.SubprocessCommandRunner(),
         verbose=logging.getLogger().level == logging.DEBUG,
     )
+
+
+def rebuild_initramfs():
+    plan = resolve_boot_rebuild_plan()
+    print('Rebuilding boot artifacts...')
+    execute_boot_rebuild_plan(plan)
     print('Successfully rebuilt boot artifacts!')
+
+
 
 def create_file(path, content, executable=False):
     try:
@@ -589,24 +591,46 @@ def main():
         CachedConfig.show_cache_file()
         return
 
+    boot_plan = None
+    if args.switch or args.reset:
+        assert_root()
+        try:
+            boot_plan = resolve_boot_rebuild_plan()
+        except (
+            boot.NoBootBackendFoundError,
+            boot.AmbiguousBootBackendError,
+            boot.UnsupportedBootIntegrationError,
+        ) as error:
+            logging.error(str(error))
+            print('No system files were modified.', file=sys.stderr)
+            raise SystemExit(1) from error
+
     if args.switch or args.reset_sddm or args.reset:
         with CachedConfig(args).adapter():
-            if args.switch:
-                assert_root()
-                graphics_mode_switcher(
-                    args.switch, args.dm,
-                    args.force_comp, args.coolbits, args.rtd3, args.use_nvidia_current
+            try:
+                if args.switch:
+                    graphics_mode_switcher(
+                        args.switch, args.dm,
+                        args.force_comp, args.coolbits, args.rtd3, args.use_nvidia_current,
+                        boot_plan=boot_plan,
+                    )
+                elif args.reset_sddm:
+                    assert_root()
+                    create_file(SDDM_XSETUP_PATH, SDDM_XSETUP_CONTENT, True)
+                    print('Operation completed successfully')
+                elif args.reset:
+                    cleanup()
+                    CachedConfig.delete_cache_file()
+                    execute_boot_rebuild_plan(boot_plan)
+                    print('Operation completed successfully')
+            except boot.BootRebuildCommandError as error:
+                logging.error(str(error))
+                print(
+                    'Boot artifact rebuild failed after system changes. '
+                    'Resolve the error before rebooting.',
+                    file=sys.stderr,
                 )
-            elif args.reset_sddm:
-                assert_root()
-                create_file(SDDM_XSETUP_PATH, SDDM_XSETUP_CONTENT, True)
-                print('Operation completed successfully')
-            elif args.reset:
-                assert_root()
-                cleanup()
-                CachedConfig.delete_cache_file()
-                rebuild_initramfs()
-                print('Operation completed successfully')
+                raise SystemExit(1) from error
 
 
 class CachedConfig:
