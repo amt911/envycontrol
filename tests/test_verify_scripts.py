@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SMOKE = ROOT / "scripts" / "verify" / "smoke-cli.sh"
 SYSTEM_VM = ROOT / "scripts" / "verify" / "system-vm.sh"
+MUTATION = ROOT / "scripts" / "run-mutation.sh"
 
 
 def test_safe_smoke_script_passes_without_privileged_operations():
@@ -37,3 +38,11 @@ def test_system_vm_guard_runs_before_mutating_commands():
     guard_index = next(i for i, line in enumerate(lines) if "require-disposable-vm.sh" in line)
     first_envy_index = next(i for i, line in enumerate(lines) if '"$PYTHON" "$ROOT/envycontrol.py"' in line)
     assert guard_index < first_envy_index
+
+
+def test_mutation_runner_resolves_mutmut_before_sudo_systemd_boundary():
+    text = MUTATION.read_text()
+    resolve = 'mutmut_bin="$(command -v mutmut)"'
+    assert resolve in text
+    assert text.index(resolve) < text.index("sudo systemd-run")
+    assert '"$mutmut_bin" run' in text

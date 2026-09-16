@@ -75,6 +75,16 @@ def test_amd_provider_name_is_read_from_xrandr(monkeypatch):
     assert envycontrol.get_amd_igpu_name() == "AMD Radeon Graphics"
 
 
+def test_xrandr_command_failure_returns_none(monkeypatch):
+    monkeypatch.setattr(envycontrol.os.path, "exists", lambda path: path == "/usr/bin/xrandr")
+
+    def fail(args):
+        raise envycontrol.subprocess.CalledProcessError(1, args)
+
+    monkeypatch.setattr(envycontrol.subprocess, "check_output", fail)
+    assert envycontrol.get_amd_igpu_name() is None
+
+
 def test_missing_xrandr_returns_none(monkeypatch):
     monkeypatch.setattr(envycontrol.os.path, "exists", lambda path: False)
     assert envycontrol.get_amd_igpu_name() is None
