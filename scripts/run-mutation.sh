@@ -14,21 +14,27 @@ if [[ "$#" -ne 0 ]]; then
   exit 64
 fi
 
+mutmut_bin="$(command -v mutmut)"
+if [[ -z "$mutmut_bin" ]]; then
+  echo "mutmut is not installed or not available on PATH" >&2
+  exit 127
+fi
+
 run_mutmut_in_cgroup() {
   if [[ "${CI:-}" == "true" ]]; then
     sudo systemd-run --scope --quiet \
       -p MemoryHigh=5G -p MemoryMax=6G -p MemorySwapMax=0 -- \
-      mutmut run
+      "$mutmut_bin" run
   else
     systemd-run --user --scope --quiet \
       -p MemoryHigh=5G -p MemoryMax=6G -p MemorySwapMax=0 -- \
-      mutmut run
+      "$mutmut_bin" run
   fi
 }
 
 rm -rf mutants
 run_mutmut_in_cgroup
-mutmut export-cicd-stats
+"$mutmut_bin" export-cicd-stats
 
 checker=(python scripts/check_mutation_score.py mutants/mutmut-cicd-stats.json --threshold 60)
 if [[ "$advisory" -eq 1 ]]; then
