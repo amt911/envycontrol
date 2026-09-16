@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SMOKE = ROOT / "scripts" / "verify" / "smoke-cli.sh"
 SYSTEM_VM = ROOT / "scripts" / "verify" / "system-vm.sh"
+VERIFY_PR = ROOT / "scripts" / "verify" / "verify-pr.sh"
 MUTATION = ROOT / "scripts" / "run-mutation.sh"
 
 
@@ -46,3 +47,12 @@ def test_mutation_runner_resolves_mutmut_before_sudo_systemd_boundary():
     assert resolve in text
     assert text.index(resolve) < text.index("sudo systemd-run")
     assert '"$mutmut_bin" run' in text
+
+
+def test_pr_verifier_exists_and_keeps_destructive_vm_verification_opt_in():
+    assert VERIFY_PR.is_file()
+    text = VERIFY_PR.read_text()
+    assert "NOT EXECUTED — requires disposable VM" in text
+    assert "RUN_SYSTEM_VM" in text
+    assert "system-vm.sh" in text
+    assert "--force-host" not in text
