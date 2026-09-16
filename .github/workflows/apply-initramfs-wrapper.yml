@@ -29,29 +29,33 @@ jobs:
           text = path.read_text()
           start = text.index('def rebuild_initramfs():\n')
           end = text.index('\ndef create_file(', start)
-          replacement = '''def rebuild_initramfs():
-    plan = resolve_boot_rebuild_plan()
-    print('Rebuilding boot artifacts...')
-    plan.execute(
-        boot.SubprocessCommandRunner(),
-        verbose=logging.getLogger().level == logging.DEBUG,
-    )
-    print('Successfully rebuilt boot artifacts!')
-
-'''
+          replacement = "\n".join([
+              "def rebuild_initramfs():",
+              "    plan = resolve_boot_rebuild_plan()",
+              "    print('Rebuilding boot artifacts...')",
+              "    plan.execute(",
+              "        boot.SubprocessCommandRunner(),",
+              "        verbose=logging.getLogger().level == logging.DEBUG,",
+              "    )",
+              "    print('Successfully rebuilt boot artifacts!')",
+              "",
+              "",
+          ])
           text = text[:start] + replacement + text[end + 1:]
           path.write_text(text)
 
           tests = Path('tests/test_host_safety.py')
           content = tests.read_text()
           old = '    monkeypatch.setattr(envycontrol, "rebuild_initramfs", lambda: calls.append(("initramfs",)))\n\n    envycontrol.graphics_mode_switcher'
-          new = '''    class FakePlan:
-        def execute(self, runner, verbose=False):
-            calls.append(("initramfs",))
-
-    monkeypatch.setattr(envycontrol, "resolve_boot_rebuild_plan", lambda: FakePlan())
-
-    envycontrol.graphics_mode_switcher'''
+          new = "\n".join([
+              "    class FakePlan:",
+              "        def execute(self, runner, verbose=False):",
+              "            calls.append((\"initramfs\",))",
+              "",
+              "    monkeypatch.setattr(envycontrol, \"resolve_boot_rebuild_plan\", lambda: FakePlan())",
+              "",
+              "    envycontrol.graphics_mode_switcher",
+          ])
           assert old in content
           tests.write_text(content.replace(old, new, 1))
           PY
