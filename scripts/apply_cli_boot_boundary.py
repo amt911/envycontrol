@@ -3,6 +3,7 @@ from pathlib import Path
 
 path = Path("envycontrol.py")
 text = path.read_text(encoding="utf-8")
+text = text.replace("import shutil\n", "", 1)
 
 old_signature = (
     "def graphics_mode_switcher(graphics_mode, user_display_manager, enable_force_comp, "
