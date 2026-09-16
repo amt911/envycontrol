@@ -4,7 +4,7 @@ addopts = ["-ra", "--strict-config", "--strict-markers"]
 
 [tool.coverage.run]
 branch = true
-source = ["envycontrol"]
+source = ["envycontrol", "envycontrol_boot"]
 
 [tool.coverage.report]
 show_missing = true
@@ -29,7 +29,7 @@ check_untyped_defs = true
 no_implicit_optional = true
 
 [tool.mutmut]
-source_paths = ["envycontrol.py"]
+source_paths = ["envycontrol.py", "envycontrol_boot.py"]
 pytest_add_cli_args_test_selection = ["tests/"]
 also_copy = ["scripts/", "CLAUDE.md", "AGENTS.md", ".github/", ".pre-commit-config.yaml", ".markdownlint.jsonc"]
 mutate_only_covered_lines = true
