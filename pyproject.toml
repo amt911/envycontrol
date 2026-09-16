@@ -31,5 +31,5 @@ no_implicit_optional = true
 [tool.mutmut]
 source_paths = ["envycontrol.py", "envycontrol_boot.py"]
 pytest_add_cli_args_test_selection = ["tests/"]
-also_copy = ["scripts/", "CLAUDE.md", "AGENTS.md", ".github/", ".pre-commit-config.yaml", ".markdownlint.jsonc"]
+also_copy = ["setup.py", "scripts/", "CLAUDE.md", "AGENTS.md", ".github/", ".pre-commit-config.yaml", ".markdownlint.jsonc"]
 mutate_only_covered_lines = true
