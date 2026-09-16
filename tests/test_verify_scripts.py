@@ -49,6 +49,13 @@ def test_mutation_runner_resolves_mutmut_before_sudo_systemd_boundary():
     assert '"$mutmut_bin" run' in text
 
 
+def test_mutation_runner_preserves_python_interpreter_across_systemd_boundary():
+    text = MUTATION.read_text()
+    assert 'python_bin="$(command -v python)"' in text
+    assert '--setenv=PYTHON="$python_bin"' in text
+    assert '--setenv=PATH="$PATH"' in text
+
+
 def test_pr_verifier_exists_and_keeps_destructive_vm_verification_opt_in():
     assert VERIFY_PR.is_file()
     text = VERIFY_PR.read_text()
