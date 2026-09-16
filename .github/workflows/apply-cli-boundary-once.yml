@@ -6,6 +6,7 @@ on:
       - feat/boot-rebuild-backends
     paths:
       - .github/workflows/apply-cli-boundary-once.yml
+      - scripts/apply_cli_boot_boundary.py
 
 permissions:
   contents: write
