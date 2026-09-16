@@ -58,6 +58,7 @@ def test_mutation_runner_preserves_python_interpreter_across_systemd_boundary():
 
 def test_pr_verifier_exists_and_keeps_destructive_vm_verification_opt_in():
     assert VERIFY_PR.is_file()
+    assert os.access(VERIFY_PR, os.X_OK)
     text = VERIFY_PR.read_text()
     assert "NOT EXECUTED — requires disposable VM" in text
     assert "RUN_SYSTEM_VM" in text
