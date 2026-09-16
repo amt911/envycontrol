@@ -127,6 +127,14 @@ Use Hypothesis where invariants are stronger than a list of examples, especially
 
 Use `mutmut` over meaningful core logic. Measure a real baseline before recording a threshold.
 
+Current measured baseline (2026-09-16, `mutmut 3.8.0`):
+
+- 533 killed, 369 survived, 0 timeouts, 0 skipped, 902 total mutants;
+- mutation score: **59.09%**;
+- policy: **advisory** because the measured score is below the non-negotiable 60% floor.
+
+Until a fresh mutation run reaches at least **60%**, the next feature or behavior-changing change **MUST NOT be declared complete**. Do not lower the floor, exclude meaningful core logic, or reclassify timeouts/survivors to manufacture a passing score.
+
 - Once blocking, **60% is the absolute floor**.
 - The threshold is a ratchet: it can stay or rise, never fall to make a push pass.
 - If the measured baseline is below 60%, report the real score/date as advisory and treat reaching 60% as debt before the next feature is considered complete.
