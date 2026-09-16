@@ -1,4 +1,6 @@
+import glob
 import shutil
+import subprocess
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
@@ -49,6 +51,8 @@ class SystemProbe(Protocol):
 
     def read_text(self, path: Path | str) -> str | None: ...
 
+    def glob(self, pattern: str) -> tuple[Path, ...]: ...
+
 
 class LocalSystemProbe:
     def exists(self, path: Path | str) -> bool:
@@ -75,6 +79,9 @@ class LocalSystemProbe:
         except OSError:
             return None
 
+    def glob(self, pattern: str) -> tuple[Path, ...]:
+        return tuple(Path(path) for path in glob.glob(pattern))
+
 
 class InitramfsBackend(Protocol):
     name: str
@@ -82,6 +89,155 @@ class InitramfsBackend(Protocol):
     def detect(self, probe: SystemProbe) -> DetectionResult: ...
 
     def build_command(self, probe: SystemProbe) -> tuple[str, ...]: ...
+
+
+class CommandRunner(Protocol):
+    def run(self, argv: tuple[str, ...], *, verbose: bool = False) -> CommandResult: ...
+
+
+class BootArtifactStrategy(Protocol):
+    def stages(
+        self,
+        probe: SystemProbe,
+        backend_name: str,
+    ) -> tuple["BootStage", ...]: ...
+
+
+class SubprocessCommandRunner:
+    def run(self, argv: tuple[str, ...], *, verbose: bool = False) -> CommandResult:
+        if verbose:
+            result = subprocess.run(list(argv))
+        else:
+            result = subprocess.run(
+                list(argv),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        return CommandResult(returncode=result.returncode)
+
+
+@dataclass(frozen=True)
+class BootStage:
+    name: str
+    argv: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        if not self.argv:
+            raise ValueError("Boot stage command cannot be empty")
+
+
+@dataclass(frozen=True)
+class BootRebuildPlan:
+    backend: str
+    stages: tuple[BootStage, ...]
+    evidence: tuple[DetectionEvidence, ...]
+    diagnostics: tuple[str, ...]
+    use_inhibit: bool
+
+    def __post_init__(self) -> None:
+        if not self.stages:
+            raise ValueError("Boot rebuild plan must contain at least one stage")
+
+    def execute(self, runner: CommandRunner, *, verbose: bool = False) -> None:
+        for stage in self.stages:
+            argv = stage.argv
+            if self.use_inhibit:
+                argv = (
+                    "systemd-inhibit",
+                    "--who=envycontrol",
+                    "--why",
+                    "Rebuilding boot artifacts",
+                    "--",
+                    *argv,
+                )
+            result = runner.run(argv, verbose=verbose)
+            if result.returncode != 0:
+                raise BootRebuildCommandError(
+                    f"Boot rebuild stage '{stage.name}' failed for {self.backend}: "
+                    + " ".join(stage.argv)
+                )
+
+
+@dataclass(frozen=True)
+class KernelInstallConfig:
+    layout: str | None = None
+    initrd_generator: str | None = None
+    uki_generator: str | None = None
+
+
+class KernelInstallStrategy:
+    CONFIG_PATH = "/etc/kernel/install.conf"
+
+    def read_config(self, probe: SystemProbe) -> KernelInstallConfig:
+        text = probe.read_text(self.CONFIG_PATH)
+        if text is None:
+            return KernelInstallConfig()
+
+        values: dict[str, str] = {}
+        accepted = {"layout", "initrd_generator", "uki_generator"}
+        for raw_line in text.splitlines():
+            line = raw_line.split("#", 1)[0].strip()
+            if not line or "=" not in line:
+                continue
+            key, value = (part.strip() for part in line.split("=", 1))
+            if key in accepted and value:
+                values[key] = value
+
+        return KernelInstallConfig(
+            layout=values.get("layout"),
+            initrd_generator=values.get("initrd_generator"),
+            uki_generator=values.get("uki_generator"),
+        )
+
+    def is_authoritative(
+        self,
+        probe: SystemProbe,
+        config: KernelInstallConfig,
+    ) -> bool:
+        return probe.command_exists("kernel-install") and config.initrd_generator is not None
+
+
+class NativeBootArtifactStrategy:
+    def stages(
+        self,
+        probe: SystemProbe,
+        backend_name: str,
+    ) -> tuple[BootStage, ...]:
+        return ()
+
+
+class LimineIntegration:
+    CONFIG_PATHS = ("/etc/default/limine", "/etc/limine-entry-tool.conf")
+    HOOK_PATTERNS = (
+        "/usr/share/libalpm/hooks/*limine*.hook",
+        "/etc/pacman.d/hooks/*limine*.hook",
+    )
+
+    def validate(
+        self,
+        probe: SystemProbe,
+        *,
+        backend_name: str,
+    ) -> tuple[BootStage, ...]:
+        configured = any(probe.read_text(path) is not None for path in self.CONFIG_PATHS)
+        if not configured:
+            return ()
+
+        for pattern in self.HOOK_PATTERNS:
+            for hook_path in probe.glob(pattern):
+                if probe.is_masked(hook_path):
+                    continue
+                content = probe.read_text(hook_path)
+                if not content:
+                    continue
+                normalized = content.lower()
+                if "limine-entry-tool" in normalized and backend_name.lower() in normalized:
+                    return ()
+
+        raise UnsupportedBootIntegrationError(
+            "Limine configuration was detected, but no supported native "
+            f"{backend_name} integration could be verified."
+        )
 
 
 def _evidence(kind: EvidenceKind, description: str) -> DetectionEvidence:
@@ -182,7 +338,10 @@ class DracutBackend(_BaseBackend):
             and probe.command_exists("dracut-rebuild")
         ):
             evidence.append(
-                _evidence(EvidenceKind.ACTIVE_INTEGRATION, "EndeavourOS dracut-rebuild integration detected")
+                _evidence(
+                    EvidenceKind.ACTIVE_INTEGRATION,
+                    "EndeavourOS dracut-rebuild integration detected",
+                )
             )
 
         return self._result(evidence)
@@ -232,7 +391,10 @@ class MkinitcpioBackend(_BaseBackend):
             "/etc/pacman.d/hooks/90-mkinitcpio-install.hook",
         ):
             evidence.append(
-                _evidence(EvidenceKind.ACTIVE_INTEGRATION, "active mkinitcpio pacman hook detected")
+                _evidence(
+                    EvidenceKind.ACTIVE_INTEGRATION,
+                    "active mkinitcpio pacman hook detected",
+                )
             )
 
         return self._result(evidence)
@@ -252,7 +414,10 @@ class BoosterBackend(_BaseBackend):
 
         if helper_exists and probe.exists("/etc/booster.yaml"):
             evidence.append(
-                _evidence(EvidenceKind.GENERATED_ARTIFACT, "Booster configuration detected")
+                _evidence(
+                    EvidenceKind.GENERATED_ARTIFACT,
+                    "Booster configuration detected",
+                )
             )
 
         return self._result(evidence)
@@ -327,4 +492,108 @@ def default_backend_resolver() -> BootBackendResolver:
             MkinitcpioBackend(),
             BoosterBackend(),
         )
+    )
+
+
+class BootRebuildCoordinator:
+    def __init__(
+        self,
+        resolver: BootBackendResolver,
+        kernel_install: KernelInstallStrategy,
+        artifact_strategy: BootArtifactStrategy,
+        bootloader_integration: LimineIntegration,
+    ):
+        self.resolver = resolver
+        self.kernel_install = kernel_install
+        self.artifact_strategy = artifact_strategy
+        self.bootloader_integration = bootloader_integration
+
+    @staticmethod
+    def _backend_from_name(name: str) -> InitramfsBackend:
+        backends: dict[str, InitramfsBackend] = {
+            "dracut": DracutBackend(),
+            "mkinitcpio": MkinitcpioBackend(),
+            "booster": BoosterBackend(),
+        }
+        try:
+            return backends[name]
+        except KeyError as error:
+            raise NoBootBackendFoundError(
+                f"Unsupported kernel-install initrd_generator={name}"
+            ) from error
+
+    @staticmethod
+    def _ensure_backend_available(
+        backend: InitramfsBackend,
+        probe: SystemProbe,
+    ) -> None:
+        available = {
+            "dracut": probe.command_exists("dracut"),
+            "mkinitcpio": probe.command_exists("mkinitcpio"),
+            "booster": (
+                probe.command_exists("booster")
+                or probe.exists("/usr/lib/booster/regenerate_images")
+            ),
+        }.get(backend.name, True)
+        if not available:
+            raise NoBootBackendFoundError(
+                f"kernel-install selects {backend.name}, but its generator is not available"
+            )
+
+    def resolve(self, probe: SystemProbe) -> BootRebuildPlan:
+        is_ostree = probe.exists("/ostree") or probe.exists("/sysroot/ostree")
+        kernel_config = self.kernel_install.read_config(probe)
+
+        if not is_ostree and self.kernel_install.is_authoritative(probe, kernel_config):
+            assert kernel_config.initrd_generator is not None
+            backend = self._backend_from_name(kernel_config.initrd_generator)
+            self._ensure_backend_available(backend, probe)
+            evidence = (
+                _evidence(
+                    EvidenceKind.EXPLICIT_CONFIG,
+                    f"kernel-install initrd_generator={kernel_config.initrd_generator}",
+                ),
+            )
+            diagnostics = [evidence[0].description]
+            if kernel_config.layout:
+                diagnostics.append(f"kernel-install layout={kernel_config.layout}")
+            if kernel_config.uki_generator:
+                diagnostics.append(
+                    f"kernel-install uki_generator={kernel_config.uki_generator}"
+                )
+            self.bootloader_integration.validate(
+                probe,
+                backend_name=backend.name,
+            )
+            return BootRebuildPlan(
+                backend=backend.name,
+                stages=(BootStage("kernel-install", ("kernel-install", "add-all")),),
+                evidence=evidence,
+                diagnostics=tuple(diagnostics),
+                use_inhibit=probe.command_exists("systemd-inhibit"),
+            )
+
+        backend = self.resolver.resolve(probe)
+        result = backend.detect(probe)
+        artifact_stages = self.artifact_strategy.stages(probe, backend.name)
+        bootloader_stages = self.bootloader_integration.validate(
+            probe,
+            backend_name=backend.name,
+        )
+        primary = BootStage("initramfs", backend.build_command(probe))
+        return BootRebuildPlan(
+            backend=backend.name,
+            stages=(primary, *artifact_stages, *bootloader_stages),
+            evidence=result.evidence,
+            diagnostics=tuple(item.description for item in result.evidence),
+            use_inhibit=probe.command_exists("systemd-inhibit"),
+        )
+
+
+def default_boot_rebuild_coordinator() -> BootRebuildCoordinator:
+    return BootRebuildCoordinator(
+        resolver=default_backend_resolver(),
+        kernel_install=KernelInstallStrategy(),
+        artifact_strategy=NativeBootArtifactStrategy(),
+        bootloader_integration=LimineIntegration(),
     )
