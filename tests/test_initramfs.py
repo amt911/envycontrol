@@ -1,93 +1,74 @@
 import logging
-from types import SimpleNamespace
 
 import pytest
 
 import envycontrol
+import envycontrol_boot as boot
 
 
-@pytest.mark.parametrize(
-    ("present", "expected"),
-    [
-        ({"/ostree"}, ["rpm-ostree", "initramfs", "--enable", "--arg=--force"]),
-        ({"/etc/debian_version"}, ["update-initramfs", "-u", "-k", "all"]),
-        ({"/etc/redhat-release"}, ["dracut", "--force", "--regenerate-all"]),
-        ({"/usr/bin/zypper"}, ["dracut", "--force", "--regenerate-all"]),
-        (
-            {"/usr/lib/endeavouros-release", "/usr/bin/dracut"},
-            ["dracut-rebuild"],
-        ),
-        ({"/etc/altlinux-release"}, ["make-initrd"]),
-        ({"/etc/arch-release"}, ["mkinitcpio", "-P"]),
-    ],
-)
-def test_rebuild_initramfs_selects_distribution_command(monkeypatch, present, expected):
-    calls = []
-    monkeypatch.setattr(envycontrol.os.path, "exists", lambda path: path in present)
-    monkeypatch.setattr(envycontrol.shutil, "which", lambda command: None)
+def test_rebuild_initramfs_executes_one_resolved_plan(monkeypatch):
+    events = []
+
+    class FakePlan:
+        def execute(self, runner, verbose=False):
+            events.append(("execute", type(runner).__name__, verbose))
+
     monkeypatch.setattr(
-        envycontrol.subprocess,
-        "run",
-        lambda args, **kwargs: calls.append(list(args)) or SimpleNamespace(returncode=0),
+        envycontrol,
+        "resolve_boot_rebuild_plan",
+        lambda: events.append(("resolve",)) or FakePlan(),
     )
 
     envycontrol.rebuild_initramfs()
 
-    assert calls == [expected]
+    assert events == [
+        ("resolve",),
+        ("execute", "SubprocessCommandRunner", False),
+    ]
 
 
-def test_rebuild_initramfs_wraps_selected_command_with_systemd_inhibit(monkeypatch):
-    calls = []
-    monkeypatch.setattr(
-        envycontrol.os.path,
-        "exists",
-        lambda path: path == "/etc/arch-release",
-    )
-    monkeypatch.setattr(envycontrol.shutil, "which", lambda command: "/usr/bin/systemd-inhibit")
-    monkeypatch.setattr(
-        envycontrol.subprocess,
-        "run",
-        lambda args, **kwargs: calls.append(list(args)) or SimpleNamespace(returncode=0),
-    )
+def test_rebuild_initramfs_uses_verbose_runner_when_debugging(monkeypatch):
+    verbose_values = []
+
+    class FakePlan:
+        def execute(self, runner, verbose=False):
+            verbose_values.append(verbose)
+
+    monkeypatch.setattr(envycontrol, "resolve_boot_rebuild_plan", lambda: FakePlan())
+    monkeypatch.setattr(logging.getLogger(), "level", logging.DEBUG)
 
     envycontrol.rebuild_initramfs()
 
-    assert calls == [[
-        "systemd-inhibit",
-        "--who=envycontrol",
-        "--why",
-        "Rebuilding initramfs",
-        "--",
-        "mkinitcpio",
-        "-P",
-    ]]
+    assert verbose_values == [True]
 
 
-def test_unknown_distribution_without_inhibit_runs_no_command(monkeypatch):
-    calls = []
-    monkeypatch.setattr(envycontrol.os.path, "exists", lambda path: False)
-    monkeypatch.setattr(envycontrol.shutil, "which", lambda command: None)
+def test_rebuild_initramfs_propagates_preflight_failure_before_command_execution(
+    monkeypatch,
+):
+    commands = []
+
+    def fail_preflight():
+        raise boot.NoBootBackendFoundError("no supported backend")
+
+    monkeypatch.setattr(envycontrol, "resolve_boot_rebuild_plan", fail_preflight)
     monkeypatch.setattr(
         envycontrol.subprocess,
         "run",
-        lambda args, **kwargs: calls.append(list(args)) or SimpleNamespace(returncode=0),
+        lambda *args, **kwargs: commands.append(args),
     )
-    envycontrol.rebuild_initramfs()
-    assert calls == []
 
-
-def test_initramfs_failure_is_logged(monkeypatch, caplog):
-    monkeypatch.setattr(
-        envycontrol.os.path,
-        "exists",
-        lambda path: path == "/etc/arch-release",
-    )
-    monkeypatch.setattr(envycontrol.shutil, "which", lambda command: None)
-    monkeypatch.setattr(
-        envycontrol.subprocess,
-        "run",
-        lambda args, **kwargs: SimpleNamespace(returncode=1),
-    )
-    with caplog.at_level(logging.ERROR):
+    with pytest.raises(boot.NoBootBackendFoundError, match="no supported backend"):
         envycontrol.rebuild_initramfs()
-    assert "error ocurred while rebuilding" in caplog.text
+
+    assert commands == []
+
+
+def test_rebuild_initramfs_propagates_stage_failure(monkeypatch):
+    class FailingPlan:
+        def execute(self, runner, verbose=False):
+            raise boot.BootRebuildCommandError("dracut failed")
+
+    monkeypatch.setattr(envycontrol, "resolve_boot_rebuild_plan", lambda: FailingPlan())
+
+    with pytest.raises(boot.BootRebuildCommandError, match="dracut failed"):
+        envycontrol.rebuild_initramfs()
