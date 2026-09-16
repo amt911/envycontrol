@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cat <<'EOF'
+00:02.0 VGA compatible controller: Intel Corporation UHD Graphics
+01:00.0 3D controller: NVIDIA Corporation Test GPU
+EOF

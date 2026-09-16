@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1-}" == "--listproviders" ]]; then
+  echo 'Provider 1: id: 0x54 name:AMD Radeon Graphics'
+  exit 0
+fi
+printf 'xrandr %s\n' "$*" >>"${ENVYCONTROL_TEST_COMMAND_LOG:?}"
