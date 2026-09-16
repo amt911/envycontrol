@@ -17,4 +17,8 @@ Verified working memory for agents. One fact per line; facts must include how an
 
 ## Verification state
 
+- The host-safe pytest suite currently collects **94 tests**, all passing on the verified CI run; branch coverage is **85.15%**, above the enforced 80% floor. *(verified: GitHub Actions CI output on branch `add-claude-md`, 2026-09-16)*
+- Ruff and mypy pass on the measured development scope. *(verified: GitHub Actions CI output on branch `add-claude-md`, 2026-09-16)*
+- The measured `mutmut 3.8.0` baseline is **59.09%**: 533 killed, 369 survived, 0 timeouts, 0 skipped, 902 total mutants. Because this is below the non-negotiable 60% floor, mutation remains advisory; the threshold has not been lowered. *(verified: successful Mutation workflow after commit `7ac670f`, 2026-09-16)*
+- Per the approved plan, the next feature or behavior-changing change MUST NOT be declared complete until a fresh mutation run reaches at least **60%**. *(verified: `docs/superpowers/plans/2026-09-16-agentic-development-foundation.md` Task 8 and measured baseline, 2026-09-16)*
 - Destructive VM verification has not been executed in this chat because no disposable EnvyControl test VM is connected. Status: **NOT EXECUTED — requires disposable VM**. *(verified: execution environment capability, 2026-09-16)*
