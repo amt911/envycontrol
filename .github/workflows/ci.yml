@@ -40,66 +40,71 @@ jobs:
           assert old_helpers in text
           text = text.replace(old_helpers, new_helpers, 1)
 
-          old_main = """    if args.switch or args.reset_sddm or args.reset:
-        with CachedConfig(args).adapter():
-            if args.switch:
-                assert_root()
-                graphics_mode_switcher(
-                    args.switch, args.dm,
-                    args.force_comp, args.coolbits, args.rtd3, args.use_nvidia_current
-                )
-            elif args.reset_sddm:
-                assert_root()
-                create_file(SDDM_XSETUP_PATH, SDDM_XSETUP_CONTENT, True)
-                print('Operation completed successfully')
-            elif args.reset:
-                assert_root()
-                cleanup()
-                CachedConfig.delete_cache_file()
-                rebuild_initramfs()
-                print('Operation completed successfully')
-"""
-          new_main = """    boot_plan = None
-    if args.switch or args.reset:
-        assert_root()
-        try:
-            boot_plan = resolve_boot_rebuild_plan()
-        except (
-            boot.NoBootBackendFoundError,
-            boot.AmbiguousBootBackendError,
-            boot.UnsupportedBootIntegrationError,
-        ) as error:
-            logging.error(str(error))
-            print('No system files were modified.', file=sys.stderr)
-            raise SystemExit(1) from error
+          old_main_lines = [
+              '    if args.switch or args.reset_sddm or args.reset:',
+              '        with CachedConfig(args).adapter():',
+              '            if args.switch:',
+              '                assert_root()',
+              '                graphics_mode_switcher(',
+              '                    args.switch, args.dm,',
+              '                    args.force_comp, args.coolbits, args.rtd3, args.use_nvidia_current',
+              '                )',
+              '            elif args.reset_sddm:',
+              '                assert_root()',
+              '                create_file(SDDM_XSETUP_PATH, SDDM_XSETUP_CONTENT, True)',
+              "                print('Operation completed successfully')",
+              '            elif args.reset:',
+              '                assert_root()',
+              '                cleanup()',
+              '                CachedConfig.delete_cache_file()',
+              '                rebuild_initramfs()',
+              "                print('Operation completed successfully')",
+          ]
+          old_main = '\n'.join(old_main_lines) + '\n'
 
-    if args.switch or args.reset_sddm or args.reset:
-        with CachedConfig(args).adapter():
-            try:
-                if args.switch:
-                    graphics_mode_switcher(
-                        args.switch, args.dm,
-                        args.force_comp, args.coolbits, args.rtd3, args.use_nvidia_current,
-                        boot_plan=boot_plan,
-                    )
-                elif args.reset_sddm:
-                    assert_root()
-                    create_file(SDDM_XSETUP_PATH, SDDM_XSETUP_CONTENT, True)
-                    print('Operation completed successfully')
-                elif args.reset:
-                    cleanup()
-                    CachedConfig.delete_cache_file()
-                    execute_boot_rebuild_plan(boot_plan)
-                    print('Operation completed successfully')
-            except boot.BootRebuildCommandError as error:
-                logging.error(str(error))
-                print(
-                    'Boot artifact rebuild failed after system changes. '
-                    'Resolve the error before rebooting.',
-                    file=sys.stderr,
-                )
-                raise SystemExit(1) from error
-"""
+          new_main_lines = [
+              '    boot_plan = None',
+              '    if args.switch or args.reset:',
+              '        assert_root()',
+              '        try:',
+              '            boot_plan = resolve_boot_rebuild_plan()',
+              '        except (',
+              '            boot.NoBootBackendFoundError,',
+              '            boot.AmbiguousBootBackendError,',
+              '            boot.UnsupportedBootIntegrationError,',
+              '        ) as error:',
+              '            logging.error(str(error))',
+              "            print('No system files were modified.', file=sys.stderr)",
+              '            raise SystemExit(1) from error',
+              '',
+              '    if args.switch or args.reset_sddm or args.reset:',
+              '        with CachedConfig(args).adapter():',
+              '            try:',
+              '                if args.switch:',
+              '                    graphics_mode_switcher(',
+              '                        args.switch, args.dm,',
+              '                        args.force_comp, args.coolbits, args.rtd3, args.use_nvidia_current,',
+              '                        boot_plan=boot_plan,',
+              '                    )',
+              '                elif args.reset_sddm:',
+              '                    assert_root()',
+              '                    create_file(SDDM_XSETUP_PATH, SDDM_XSETUP_CONTENT, True)',
+              "                    print('Operation completed successfully')",
+              '                elif args.reset:',
+              '                    cleanup()',
+              '                    CachedConfig.delete_cache_file()',
+              '                    execute_boot_rebuild_plan(boot_plan)',
+              "                    print('Operation completed successfully')",
+              '            except boot.BootRebuildCommandError as error:',
+              '                logging.error(str(error))',
+              '                print(',
+              "                    'Boot artifact rebuild failed after system changes. '",
+              "                    'Resolve the error before rebooting.',",
+              '                    file=sys.stderr,',
+              '                )',
+              '                raise SystemExit(1) from error',
+          ]
+          new_main = '\n'.join(new_main_lines) + '\n'
           assert old_main in text
           text = text.replace(old_main, new_main, 1)
           path.write_text(text)
