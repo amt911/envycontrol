@@ -56,6 +56,14 @@ def test_mutation_runner_preserves_python_interpreter_across_systemd_boundary():
     assert '--setenv=PATH="$PATH"' in text
 
 
+def test_mutation_runner_restores_ci_sandbox_ownership_before_export():
+    text = MUTATION.read_text()
+    ownership = 'sudo chown -R "$(id -u):$(id -g)" mutants'
+    assert ownership in text
+    assert text.index("run_mutmut_in_cgroup") < text.index(ownership)
+    assert text.index(ownership) < text.index('"$mutmut_bin" export-cicd-stats')
+
+
 def test_pr_verifier_exists_and_keeps_destructive_vm_verification_opt_in():
     assert VERIFY_PR.is_file()
     assert os.access(VERIFY_PR, os.X_OK)
