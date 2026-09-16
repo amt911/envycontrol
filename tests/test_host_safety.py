@@ -3,21 +3,20 @@ from types import SimpleNamespace
 import pytest
 
 import envycontrol
-from conftest import UnsafeHostMutation
 
 
 def test_real_etc_write_is_blocked():
-    with pytest.raises(UnsafeHostMutation, match="protected write"):
+    with pytest.raises(RuntimeError, match="blocked protected write"):
         envycontrol.create_file("/etc/modprobe.d/envycontrol-test.conf", "unsafe")
 
 
 def test_real_systemctl_is_blocked():
-    with pytest.raises(UnsafeHostMutation, match="dangerous command: systemctl"):
+    with pytest.raises(RuntimeError, match="blocked dangerous command: systemctl"):
         envycontrol.subprocess.run(["systemctl", "disable", "nvidia-persistenced.service"])
 
 
 def test_real_lspci_is_blocked():
-    with pytest.raises(UnsafeHostMutation, match="host discovery command: lspci"):
+    with pytest.raises(RuntimeError, match="blocked host discovery command: lspci"):
         envycontrol.subprocess.check_output(["lspci"])
 
 
