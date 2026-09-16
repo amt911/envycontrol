@@ -8,6 +8,8 @@ import sys
 import shutil
 from contextlib import contextmanager
 
+import envycontrol_boot as boot
+
 # begin constants definition
 
 VERSION = '3.5.2'
@@ -230,6 +232,7 @@ RTD3_MODES = [0, 1, 2, 3]
 
 
 def graphics_mode_switcher(graphics_mode, user_display_manager, enable_force_comp, coolbits_value, rtd3_value, use_nvidia_current):
+    boot_plan = resolve_boot_rebuild_plan()
     print(f"Switching to {graphics_mode} mode")
 
     if graphics_mode == 'integrated':
@@ -254,7 +257,6 @@ def graphics_mode_switcher(graphics_mode, user_display_manager, enable_force_com
         # power off the Nvidia GPU with udev rules
         create_file(UDEV_INTEGRATED_PATH, UDEV_INTEGRATED)
 
-        rebuild_initramfs()
     elif graphics_mode == 'hybrid':
         print(
             f"Enable PCI-Express Runtime D3 (RTD3) Power Management: {rtd3_value or False}")
@@ -286,7 +288,6 @@ def graphics_mode_switcher(graphics_mode, user_display_manager, enable_force_com
                 create_file(MODESET_PATH, MODESET_RTD3.format(rtd3_value))
             create_file(UDEV_PM_PATH, UDEV_PM_CONTENT)
 
-        rebuild_initramfs()
     elif graphics_mode == 'nvidia':
         print(f"Enable ForceCompositionPipeline: {enable_force_comp}")
         print(f"Enable Coolbits: {coolbits_value or False}")
@@ -353,7 +354,10 @@ def graphics_mode_switcher(graphics_mode, user_display_manager, enable_force_com
                         generate_xrandr_script(igpu_vendor), True)
             create_file(LIGHTDM_CONFIG_PATH, LIGHTDM_CONFIG_CONTENT)
 
-        rebuild_initramfs()
+    boot_plan.execute(
+        boot.SubprocessCommandRunner(),
+        verbose=logging.getLogger().level == logging.DEBUG,
+    )
     print('Operation completed successfully')
     print('Please reboot your computer for changes to take effect!')
 
@@ -481,6 +485,12 @@ def get_amd_igpu_name():
         logging.warning(
             "Could not find AMD iGPU in 'xrandr' output.")
         return None
+
+
+def resolve_boot_rebuild_plan():
+    probe = boot.LocalSystemProbe()
+    return boot.default_boot_rebuild_coordinator().resolve(probe)
+
 
 
 def rebuild_initramfs():
