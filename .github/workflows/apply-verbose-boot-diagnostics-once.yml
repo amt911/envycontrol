@@ -1,0 +1,42 @@
+name: Apply verbose boot diagnostics once
+
+on:
+  push:
+    branches:
+      - feat/boot-rebuild-backends
+    paths:
+      - .github/workflows/apply-verbose-boot-diagnostics-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/boot-rebuild-backends
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Apply patch
+        run: python scripts/apply_verbose_boot_diagnostics.py
+      - name: Install development environment
+        run: |
+          python -m pip install -e .
+          python -m pip install -r requirements-dev.txt
+      - name: Verify focused GREEN
+        run: python -m pytest tests/test_boot_verbose.py tests/test_cli.py tests/test_boot_preflight.py -v
+      - name: Static checks
+        run: |
+          ruff check envycontrol.py envycontrol_boot.py tests/test_boot_verbose.py tests/test_cli.py
+          mypy envycontrol.py envycontrol_boot.py
+      - name: Commit real change and remove helpers
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm scripts/apply_verbose_boot_diagnostics.py .github/workflows/apply-verbose-boot-diagnostics-once.yml
+          git add envycontrol.py
+          git commit -m 'feat: report boot preflight evidence in verbose mode'
+          git push origin HEAD:feat/boot-rebuild-backends
