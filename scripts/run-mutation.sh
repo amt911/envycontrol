@@ -41,7 +41,7 @@ run_mutmut_in_cgroup() {
   fi
 }
 
-rm -rf mutants
+rm -rf mutants mutation-results.txt
 run_mutmut_in_cgroup
 "$mutmut_bin" export-cicd-stats
 
@@ -49,4 +49,4 @@ checker=("$python_bin" scripts/check_mutation_score.py mutants/mutmut-cicd-stats
 if [[ "$advisory" -eq 1 ]]; then
   checker+=(--advisory)
 fi
-"${checker[@]}"
+"${checker[@]}" 2>&1 | tee mutation-results.txt

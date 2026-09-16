@@ -4,6 +4,13 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - "envycontrol.py"
+      - "tests/**"
+      - "scripts/**"
+      - "pyproject.toml"
+      - "requirements-dev.txt"
+      - ".github/workflows/mutation.yml"
   workflow_dispatch:
 
 permissions:
@@ -38,6 +45,6 @@ jobs:
         with:
           name: mutmut-report
           path: |
+            mutation-results.txt
             mutants/mutmut-cicd-stats.json
-            mutants/
           if-no-files-found: warn

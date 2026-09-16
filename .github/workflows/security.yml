@@ -7,6 +7,8 @@ on:
   push:
     branches:
       - main
+  schedule:
+    - cron: "31 5 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -22,20 +24,31 @@ jobs:
           python-version: "3.13"
           cache: pip
           cache-dependency-path: requirements-dev.txt
-      - name: Install audit tool
-        run: python -m pip install pip-audit
+      - name: Install development environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install -r requirements-dev.txt
+      - name: Check installed dependency consistency
+        run: python -m pip check
       - name: Audit declared development dependencies
         run: python -m pip_audit -r requirements-dev.txt
 
   sast:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
-      - name: Install Semgrep
-        run: python -m pip install semgrep
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install development environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install -r requirements-dev.txt
       - name: Semgrep Python and secrets rules
         run: semgrep scan --config p/python --config p/secrets envycontrol.py scripts tests
+      - name: Dead-code review
+        run: vulture envycontrol.py scripts tests --min-confidence 90
