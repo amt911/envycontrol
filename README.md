@@ -111,6 +111,12 @@ Set graphics mode to hybrid and enable fine-grained power control:
 sudo envycontrol -s hybrid --rtd3
 ```
 
+Set graphics mode to nvidia, enable ForceCompositionPipeline and Coolbits with a value of 24:
+
+```
+sudo envycontrol -s nvidia --force-comp --coolbits 24
+```
+
 Set current graphics mode to nvidia and specify to setup LightDM display manager
 
 ```
@@ -237,13 +243,13 @@ And mention it in the packages like this:
 envycontrol.packages.x86_64-linux.default
 ```
 
-Thanks to [@ITesserakt](https://github.com/bayasdev/envycontrol) for adding initial NixOS support!
+Thanks to [@ITesserakt](https://github.com/ITesserakt) for adding initial NixOS support!
 
 ### OSTree Distros (Silverblue, Kinoite, Bazzite, etc.)
 
 These distributions are also supported by the same COPR repo as Fedora Workstation. Use the [COPR](https://copr.fedorainfracloud.org/coprs/sunwire/envycontrol/) maintained by [@sunwire](https://github.com/sunwire).
 
-1. Enable the repository by downloading the `.repo` file from the COPR page, linked above. Put it in `/etc/yum.repos.d`.
+1. Enable the COPR by downloading the `.repo` file from the COPR page, linked above. Put the `.repo` file in `/etc/yum.repos.d`.
 2. Clean package cache with `rpm-ostree cleanup -m`.
 3. Overlay the package with `rpm-ostree install python-envycontrol`.
 4. Reboot to apply the overlay.
