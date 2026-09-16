@@ -494,50 +494,13 @@ def resolve_boot_rebuild_plan():
 
 
 def rebuild_initramfs():
-    # OSTree systems first
-    if any(os.path.exists(dir) for dir in ['/ostree', '/sysroot/ostree']):
-        print('Rebuilding the initramfs with rpm-ostree...')
-        command = ['rpm-ostree', 'initramfs', '--enable', '--arg=--force']
-
-    # Debian and Ubuntu derivatives
-    elif os.path.exists('/etc/debian_version'):
-        command = ['update-initramfs', '-u', '-k', 'all']
-    # RHEL and SUSE derivatives
-    elif os.path.exists('/etc/redhat-release') or os.path.exists('/usr/bin/zypper'):
-        command = ['dracut', '--force', '--regenerate-all']
-    # EndeavourOS with dracut
-    elif os.path.exists('/usr/lib/endeavouros-release') and os.path.exists('/usr/bin/dracut'):
-        command = ['dracut-rebuild']
-    # ALT Linux
-    elif os.path.exists('/etc/altlinux-release'):
-        command = ['make-initrd']
-    # Arch Linux
-    elif os.path.exists('/etc/arch-release'):
-        command = ['mkinitcpio', '-P']
-    else:
-        command = []
-
-    if shutil.which("systemd-inhibit"):
-        command = [
-            'systemd-inhibit',
-            '--who=envycontrol',
-            '--why', 'Rebuilding initramfs',
-            '--',
-            *command
-        ]
-
-    if len(command) != 0:
-        print('Rebuilding the initramfs...')
-        if logging.getLogger().level == logging.DEBUG:
-            p = subprocess.run(command)
-        else:
-            p = subprocess.run(
-                command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        if p.returncode == 0:
-            print('Successfully rebuilt the initramfs!')
-        else:
-            logging.error("An error ocurred while rebuilding the initramfs")
-
+    plan = resolve_boot_rebuild_plan()
+    print('Rebuilding boot artifacts...')
+    plan.execute(
+        boot.SubprocessCommandRunner(),
+        verbose=logging.getLogger().level == logging.DEBUG,
+    )
+    print('Successfully rebuilt boot artifacts!')
 
 def create_file(path, content, executable=False):
     try:
