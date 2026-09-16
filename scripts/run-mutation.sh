@@ -43,6 +43,9 @@ run_mutmut_in_cgroup() {
 
 rm -rf mutants mutation-results.txt
 run_mutmut_in_cgroup
+if [[ "${CI:-}" == "true" ]]; then
+  sudo chown -R "$(id -u):$(id -g)" mutants
+fi
 "$mutmut_bin" export-cicd-stats
 
 checker=("$python_bin" scripts/check_mutation_score.py mutants/mutmut-cicd-stats.json --threshold 60)
