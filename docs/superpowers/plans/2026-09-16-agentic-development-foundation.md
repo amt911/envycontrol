@@ -104,6 +104,7 @@
 ### Task 1: Establish canonical EnvyControl agent instructions and core project docs
 
 **Files:**
+
 - Create: `CLAUDE.md`
 - Create: `AGENTS.md`
 - Create: `docs/CLI_CONTRACT.md`
@@ -115,6 +116,7 @@
 - Modify: `README.md`
 
 **Interfaces:**
+
 - Consumes: the approved design spec, current `envycontrol.py`, current README, and the complete temporary `claude-md/` template tree.
 - Produces: the canonical rules and contracts every later task/tests/workflow must reference.
 
@@ -206,12 +208,14 @@ git commit -m "docs: adapt agent workflow to envycontrol"
 ### Task 2: Add Python development configuration without changing runtime packaging
 
 **Files:**
+
 - Create: `pyproject.toml`
 - Create: `requirements-dev.txt`
 - Modify: `.gitignore`
 - Test: `tests/test_agent_docs.py`
 
 **Interfaces:**
+
 - Consumes: Task 1 canonical docs.
 - Produces: installable development toolchain and machine-enforced `CLAUDE.md == AGENTS.md` invariant.
 
@@ -308,10 +312,12 @@ git commit -m "test: bootstrap python quality tooling"
 ### Task 3: Build fail-closed host-safety guards before testing system behavior
 
 **Files:**
+
 - Create: `tests/conftest.py`
 - Create: `tests/test_host_safety.py`
 
 **Interfaces:**
+
 - Produces: an autouse pytest guard that blocks the real mutation/subprocess boundaries currently used by `envycontrol.py`.
 
 - [ ] **Step 1: Write failing safety tests first.**
@@ -368,12 +374,14 @@ git commit -m "test: block host system mutation"
 ### Task 4: Characterise detection and configuration-generation behavior
 
 **Files:**
+
 - Create: `tests/test_detection.py`
 - Create: `tests/test_configuration_generation.py`
 - Create: `tests/test_properties.py`
 - Modify: `envycontrol.py` only if a failing test proves a tiny seam is required.
 
 **Interfaces:**
+
 - Tests: `get_nvidia_gpu_pci_bus`, `get_igpu_vendor`, `get_display_manager`, `get_amd_igpu_name`, `generate_xrandr_script`, `get_current_mode`, static configuration templates.
 
 - [ ] **Step 1: Add table-driven RED tests for NVIDIA PCI parsing.**
@@ -422,11 +430,13 @@ If `envycontrol.py` was unchanged, omit it from `git add`.
 ### Task 5: Characterise cache behavior and safe CLI behavior
 
 **Files:**
+
 - Create: `tests/test_cache.py`
 - Create: `tests/test_cli.py`
 - Modify: `envycontrol.py` only behind RED tests if argparse extraction is needed for reliable in-process testing.
 
 **Interfaces:**
+
 - Tests: `CachedConfig`, cache JSON shape, adapter rebinding, `assert_root`, read-only CLI paths, console entry point.
 
 - [ ] **Step 1: Write cache RED tests with the cache path redirected to `tmp_path`.**
@@ -468,11 +478,13 @@ git commit -m "test: characterize cache and cli behavior"
 ### Task 6: Characterise initramfs selection and GPU-mode side effects without touching the host
 
 **Files:**
+
 - Create: `tests/test_initramfs.py`
 - Create: `tests/test_modes.py`
 - Modify: `envycontrol.py` only when a demonstrated testability defect requires a minimal seam.
 
 **Interfaces:**
+
 - Tests: `rebuild_initramfs`, `graphics_mode_switcher`, `cleanup`, `create_file` using temporary paths/fakes.
 
 - [ ] **Step 1: Add RED tests for every current initramfs branch.**
@@ -507,10 +519,12 @@ git commit -m "test: characterize mode switching boundaries"
 ### Task 7: Enforce coverage, lint, typing, and dead-code checks
 
 **Files:**
+
 - Modify: `pyproject.toml`
 - Modify: test files from Tasks 3-6 as needed for genuine uncovered behavior.
 
 **Interfaces:**
+
 - Produces: runnable quality commands referenced by `CLAUDE.md` and later hooks/CI.
 
 - [ ] **Step 1: Run the first real branch-coverage measurement.**
@@ -555,6 +569,7 @@ git commit -m "test: enforce coverage and static quality"
 ### Task 8: Measure and wire the mutation gate without inventing a score
 
 **Files:**
+
 - Create: `scripts/check_mutation_score.py`
 - Create: `tests/test_mutation_score.py`
 - Modify: `pyproject.toml`
@@ -563,6 +578,7 @@ git commit -m "test: enforce coverage and static quality"
 - Modify: `AGENTS.md`
 
 **Interfaces:**
+
 - Produces: reproducible mutation score parsing/checking and the real baseline/threshold used by hooks and CI.
 
 - [ ] **Step 1: Verify the installed mutmut CLI before depending on remembered syntax.**
@@ -625,11 +641,13 @@ git commit -m "test: add measured mutation quality gate"
 ### Task 9: Add pre-commit/pre-push gates without destructive host tests
 
 **Files:**
+
 - Create: `.pre-commit-config.yaml`
 - Modify: `CLAUDE.md`
 - Modify: `AGENTS.md`
 
 **Interfaces:**
+
 - Consumes: quality commands and measured mutation policy from Tasks 7-8.
 - Produces: local gates future agents cannot casually skip.
 
@@ -678,12 +696,14 @@ git commit -m "chore: enforce local quality gates"
 ### Task 10: Add CI, mutation, security, and Dependabot workflows
 
 **Files:**
+
 - Create: `.github/workflows/ci.yml`
 - Create: `.github/workflows/mutation.yml`
 - Create: `.github/workflows/security.yml`
 - Create: `.github/dependabot.yml`
 
 **Interfaces:**
+
 - Produces: remote verification matching local policy without destructive system mutation.
 
 - [ ] **Step 1: Add `ci.yml`.**
@@ -728,10 +748,12 @@ git commit -m "ci: add python quality and security workflows"
 ### Task 11: Implement the disposable-VM guard and prove it fails closed
 
 **Files:**
+
 - Create: `scripts/verify/require-disposable-vm.sh`
 - Create: `tests/test_vm_guard.py`
 
 **Interfaces:**
+
 - Produces: one reusable gate that every destructive system-verification script must execute before mutation.
 
 - [ ] **Step 1: Write RED tests for all refusal paths before the shell guard exists.**
@@ -783,6 +805,7 @@ git commit -m "test: require disposable vm for system verification"
 ### Task 12: Add safe smoke verification and VM-only system verification
 
 **Files:**
+
 - Create: `scripts/verify/smoke-cli.sh`
 - Create: `scripts/verify/system-vm.sh`
 - Create: `tests/system/fixtures/bin/lspci`
@@ -792,6 +815,7 @@ git commit -m "test: require disposable vm for system verification"
 - Create: `tests/system/fixtures/bin/xrandr`
 
 **Interfaces:**
+
 - Consumes: Task 11 VM gate.
 - Produces: deterministic safe host smoke checks and destructive filesystem/system-command verification that can execute only in a disposable VM.
 
@@ -846,12 +870,14 @@ git commit -m "test: add vm-only system verification"
 ### Task 13: Adapt the full prompt library and agentic PR verifier
 
 **Files:**
+
 - Create: `docs/PROMPT_TEMPLATES.md`
 - Create: `scripts/verify/verify-pr.sh`
 - Modify: `CLAUDE.md`
 - Modify: `AGENTS.md`
 
 **Interfaces:**
+
 - Produces: task prompts and PR verification that use EnvyControl's real workflow and VM invariant.
 
 - [ ] **Step 1: Rewrite every useful prompt category from the temporary library.**
@@ -898,10 +924,12 @@ git commit -m "docs: add envycontrol prompt and pr verification workflow"
 ### Task 14: Remove the temporary template tree and prove adaptation completeness
 
 **Files:**
+
 - Delete: `claude-md/` recursively
 - Modify: any cross-reference that still points into `claude-md/`
 
 **Interfaces:**
+
 - Produces: one source of truth with no generic template tree left behind.
 
 - [ ] **Step 1: Build a source-to-destination checklist before deletion.**
@@ -945,9 +973,11 @@ git commit -m "chore: remove temporary claude templates"
 ### Task 15: Final verification, review, and PR update
 
 **Files:**
+
 - Modify: PR description/comment only as needed; no unreviewed production changes.
 
 **Interfaces:**
+
 - Produces: evidence-backed completion state for PR #1.
 
 - [ ] **Step 1: Run the safe full local verification.**
