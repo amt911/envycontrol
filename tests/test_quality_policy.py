@@ -37,10 +37,26 @@ def test_precommit_covers_whitespace_yaml_markdown_and_project_gates():
         assert marker in text
 
 
-def test_mutation_workflow_is_path_scoped_and_uploads_readable_result():
+def test_mutation_workflow_is_blocking_and_covers_both_runtime_modules():
     text = (ROOT / ".github" / "workflows" / "mutation.yml").read_text()
     assert "paths:" in text
-    assert "envycontrol.py" in text
+    assert '"envycontrol.py"' in text
+    assert '"envycontrol_boot.py"' in text
     assert "tests/**" in text
     assert "scripts/**" in text
     assert "mutation-results.txt" in text
+    assert "./scripts/run-mutation.sh --advisory" not in text
+    assert "run: ./scripts/run-mutation.sh" in text
+
+
+def test_local_quality_scripts_cover_both_runtime_modules_and_block_mutation():
+    pre_push = (ROOT / "scripts" / "hooks" / "pre-push.sh").read_text()
+    verify_pr = (ROOT / "scripts" / "verify" / "verify-pr.sh").read_text()
+
+    for text in (pre_push, verify_pr):
+        assert "--cov=envycontrol_boot" in text
+        assert "envycontrol.py envycontrol_boot.py" in text
+
+    assert "./scripts/run-mutation.sh --advisory" not in pre_push
+    assert "./scripts/run-mutation.sh" in pre_push
+    assert "./scripts/run-mutation.sh --advisory" not in verify_pr
