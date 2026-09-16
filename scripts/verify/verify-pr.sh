@@ -34,8 +34,8 @@ ruff check envycontrol.py tests scripts
 echo "==> mypy"
 mypy envycontrol.py
 
-echo "==> agent instruction parity"
-cmp -s CLAUDE.md AGENTS.md
+echo "==> agent instructions: CLAUDE.md only imports AGENTS.md"
+grep -qx '@AGENTS.md' CLAUDE.md && ! grep -q '^## ' CLAUDE.md
 
 echo "==> safe CLI smoke"
 ./scripts/verify/smoke-cli.sh
