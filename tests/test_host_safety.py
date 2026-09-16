@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 import envycontrol
+from conftest import DANGEROUS_RUN_COMMANDS
 
 
 def test_real_etc_write_is_blocked():
@@ -18,6 +19,21 @@ def test_real_systemctl_is_blocked():
 def test_real_lspci_is_blocked():
     with pytest.raises(RuntimeError, match="blocked host discovery command: lspci"):
         envycontrol.subprocess.check_output(["lspci"])
+
+
+def test_new_boot_tools_are_classified_as_dangerous_before_execution():
+    required = {
+        "booster",
+        "regenerate_images",
+        "kernel-install",
+        "ukify",
+        "limine",
+        "limine-update",
+        "limine-entry-tool",
+        "limine-dracut",
+        "limine-mkinitcpio",
+    }
+    assert required <= DANGEROUS_RUN_COMMANDS
 
 
 def test_tmp_path_write_is_allowed(tmp_path):
@@ -41,6 +57,7 @@ def test_mode_switch_can_replace_dangerous_boundaries_with_fakes(monkeypatch):
         "create_file",
         lambda path, content, executable=False: files.append((path, content, executable)),
     )
+
     class FakePlan:
         def execute(self, runner, verbose=False):
             calls.append(("initramfs",))
