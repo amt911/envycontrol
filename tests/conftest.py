@@ -2,7 +2,6 @@ import builtins
 import os
 import shlex
 import subprocess
-from pathlib import Path
 
 import pytest
 
@@ -14,6 +13,7 @@ class UnsafeHostMutation(RuntimeError):
 PROTECTED_ROOTS = (
     "/etc",
     "/usr",
+    "/lib",
     "/var/cache/envycontrol",
 )
 
@@ -95,5 +95,5 @@ def block_real_host_mutation(monkeypatch):
     monkeypatch.setattr(subprocess, "run", guarded_run)
     monkeypatch.setattr(subprocess, "check_output", guarded_check_output)
 
-    # Tests may deliberately override these patched boundaries with a controlled fake.
+    # Individual tests may override a guarded boundary only with a controlled fake.
     yield
