@@ -41,7 +41,11 @@ def test_mode_switch_can_replace_dangerous_boundaries_with_fakes(monkeypatch):
         "create_file",
         lambda path, content, executable=False: files.append((path, content, executable)),
     )
-    monkeypatch.setattr(envycontrol, "rebuild_initramfs", lambda: calls.append(("initramfs",)))
+    class FakePlan:
+        def execute(self, runner, verbose=False):
+            calls.append(("initramfs",))
+
+    monkeypatch.setattr(envycontrol, "resolve_boot_rebuild_plan", lambda: FakePlan())
 
     envycontrol.graphics_mode_switcher("integrated", None, False, None, None, False)
 
