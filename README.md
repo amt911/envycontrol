@@ -1,10 +1,10 @@
 > [!IMPORTANT]
-> **Project Status**  
-> 
+> **Project Status**
+>
 > Hi! I'm [Victor](https://github.com/bayasdev), the original author of EnvyControl. I built this over a weekend in 2021 because there wasn't any reliable solution to properly disable the Nvidia GPU that was draining my Acer Predator Helios 300's battery. I used it heavily back then, but I switched to macOS full-time and no longer run Linux daily, so I can't provide timely bug fixes, new features, or real support anymore.
-> 
+>
 > That said, EnvyControl still works well for many people on recent distros, thanks to the many PRs I've received over the years. I'm happy to transfer ownership to an active OSS initiative focused on building tools for the greater Linux ecosystem.
-> 
+>
 > Thanks for all the support over the years! ❤️
 >
 > PS: If I built this today, I'd probably use Go or Rust :)
@@ -172,7 +172,6 @@ sudo envycontrol --cache-create
 ValueError: --cache-create requires that the system be in the hybrid Optimus mode
 ```
 
-
 Delete cache created by EnvyControl
 
 ```
@@ -184,7 +183,6 @@ Show cache created by EnvyControl
 ```
 sudo envycontrol --cache-query
 ```
-
 
 ## ⬇️ Getting EnvyControl
 
@@ -201,7 +199,7 @@ Use the [COPR](https://copr.fedorainfracloud.org/coprs/sunwire/envycontrol/) mai
 2. `sudo dnf install python3-envycontrol`
 3. Run `sudo envycontrol -s <MODE>` to switch graphics modes
 
-### Enterprise Linux + EPEL 9 (RHEL 9, Rocky Linux 9, CentOS Stream 9, Alma Linux 9 etc.)
+### Enterprise Linux + EPEL 9 (RHEL 9, Rocky Linux 9, CentOS Stream 9, AlmaLinux 9 etc.)
 
 Use the [COPR](https://copr.fedorainfracloud.org/coprs/thonkdifferent/envycontrol/) maintained by [@thonkdifferent](https://github.com/thonkdifferent)
 
@@ -315,6 +313,19 @@ The below files are created by `envycontrol`, and you may want to remove them ma
 * `/etc/X11/xorg.conf`
 * `/etc/X11/xorg.conf.d/10-nvidia.conf`
 * `/etc/modprobe.d/nvidia.conf`
+
+## 🛠️ Development
+
+Repository contributors and coding agents should read `CLAUDE.md` (or the byte-identical `AGENTS.md`) before changing behavior. The project-specific contracts and prompt library live under `docs/`.
+
+```sh
+python -m pip install -e .
+python -m pip install -r requirements-dev.txt
+pre-commit install --hook-type pre-commit --hook-type pre-push
+./scripts/verify/verify-pr.sh
+```
+
+Set `RUN_MUTATION=1` when you want the PR verifier to include the current mutmut policy. Destructive mode-switch/reset verification is intentionally excluded from normal development: `scripts/verify/system-vm.sh` may run only inside a disposable VM accepted by all repository safety gates. See `docs/TEMPLATE_MIGRATION.md` for the complete mapping from the original agent template to EnvyControl.
 
 ## ❓ Frequently Asked Questions (FAQ)
 

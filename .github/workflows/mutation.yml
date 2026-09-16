@@ -1,0 +1,50 @@
+name: Mutation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "envycontrol.py"
+      - "tests/**"
+      - "scripts/**"
+      - "pyproject.toml"
+      - "requirements-dev.txt"
+      - ".github/workflows/mutation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install development environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install -r requirements-dev.txt
+
+      - name: Run mutation baseline under 6 GB cgroup
+        run: ./scripts/run-mutation.sh --advisory
+
+      - name: Upload mutmut report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mutmut-report
+          path: |
+            mutation-results.txt
+            mutants/mutmut-cicd-stats.json
+          if-no-files-found: warn

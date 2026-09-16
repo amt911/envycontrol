@@ -1,0 +1,35 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-config", "--strict-markers"]
+
+[tool.coverage.run]
+branch = true
+source = ["envycontrol"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 80
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+# Start with correctness-oriented rules on the legacy single-file runtime.
+# Import sorting / pyupgrade / simplify are intentionally a future ratchet so this
+# infrastructure PR does not mix behavioral characterization with cosmetic churn.
+select = ["E", "F", "W", "B"]
+ignore = ["E501", "E711", "E712"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_unused_configs = true
+check_untyped_defs = true
+no_implicit_optional = true
+
+[tool.mutmut]
+source_paths = ["envycontrol.py"]
+pytest_add_cli_args_test_selection = ["tests/"]
+also_copy = ["scripts/", "CLAUDE.md", "AGENTS.md", ".github/", ".pre-commit-config.yaml", ".markdownlint.jsonc"]
+mutate_only_covered_lines = true

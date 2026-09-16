@@ -1,0 +1,49 @@
+default_install_hook_types:
+  - pre-commit
+  - pre-push
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.49.0
+    hooks:
+      - id: markdownlint
+        files: ^(CLAUDE\.md|AGENTS\.md|docs/.*\.md)$
+
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff correctness checks
+        entry: ruff check
+        language: system
+        types: [python]
+        stages: [pre-commit]
+      - id: agent-docs-identical
+        name: CLAUDE.md and AGENTS.md are identical
+        entry: bash -c 'cmp -s CLAUDE.md AGENTS.md'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+      - id: safety-tests
+        name: host and VM safety regression tests
+        entry: python -m pytest -q tests/test_host_safety.py tests/test_vm_guard.py tests/test_verify_scripts.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+      - id: pre-push-quality
+        name: full coverage and mutation quality gates
+        entry: ./scripts/hooks/pre-push.sh
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

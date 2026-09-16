@@ -1,0 +1,11 @@
+pytest
+pytest-cov
+coverage
+hypothesis
+ruff
+mypy
+mutmut>=3.6
+pre-commit
+pip-audit
+semgrep
+vulture

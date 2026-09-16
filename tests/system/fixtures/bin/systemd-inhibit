@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'systemd-inhibit %s\n' "$*" >>"${ENVYCONTROL_TEST_COMMAND_LOG:?}"
