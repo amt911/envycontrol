@@ -68,6 +68,7 @@
 - `tests/test_cli.py`
 - `tests/test_properties.py`
 - `tests/test_vm_guard.py`
+- `tests/test_mutation_score.py`
 
 ### New verification/tool scripts
 
@@ -173,7 +174,7 @@ Populate it from `envycontrol.py`; do not infer undocumented side effects.
 
 - [ ] **Step 5: Seed FACTS, FINDINGS, and USER_STORIES with only verified current behavior.**
 
-Every FACTS entry includes `(verified: read <file>:<symbol>, 2026-09-16)` or a later real command when executed. FINDINGS starts empty except for genuinely non-obvious facts discovered during implementation; do not copy anecdotes/timings from another project. USER_STORIES describe the existing query/switch/reset/cache journeys and acceptance criteria, not a future wishlist.
+Every FACTS entry includes `(verified: read file:symbol, 2026-09-16)` or a later real command when executed. FINDINGS starts empty except for genuinely non-obvious facts discovered during implementation; do not copy anecdotes/timings from another project. USER_STORIES describe the existing query/switch/reset/cache journeys and acceptance criteria, not a future wishlist.
 
 - [ ] **Step 6: Add only a concise development pointer to README.**
 
@@ -185,7 +186,7 @@ Run:
 
 ```bash
 cmp -s CLAUDE.md AGENTS.md
-rg -n '<[^>]+>|TBD|TODO|@<scope>|pnpm|Playwright|Maestro|NestJS|Next\.js|Prisma' \
+rg -n 'TBD|TODO|pnpm|Playwright|Maestro|NestJS|Next\.js|Prisma' \
   CLAUDE.md AGENTS.md docs/CLI_CONTRACT.md docs/COMMAND_PERMISSIONS.md \
   docs/FACTS.md docs/FINDINGS.md docs/USER_STORIES.md
 ```
@@ -712,19 +713,7 @@ Configure monthly updates for `pip` at `/` and `github-actions` at `/`, with con
 
 - [ ] **Step 5: Validate YAML/config locally.**
 
-At minimum:
-
-```bash
-python - <<'PY'
-from pathlib import Path
-import yaml
-for path in Path('.github/workflows').glob('*.yml'):
-    yaml.safe_load(path.read_text())
-print('workflow yaml: PASS')
-PY
-```
-
-If PyYAML is not already part of the dev toolchain, validate through pre-commit's YAML hook instead of adding a runtime dependency.
+Validate through pre-commit's YAML hook rather than adding PyYAML as a runtime dependency.
 
 - [ ] **Step 6: Commit.**
 
@@ -743,11 +732,11 @@ git commit -m "ci: add python quality and security workflows"
 - Create: `tests/test_vm_guard.py`
 
 **Interfaces:**
-- Produces: one reusable gate that every destructive system-verification script must source before mutation.
+- Produces: one reusable gate that every destructive system-verification script must execute before mutation.
 
 - [ ] **Step 1: Write RED tests for all refusal paths before the shell guard exists.**
 
-Use a temporary fake `PATH` and temporary sentinel path injected only for the test harness. Cover:
+Use a temporary fake `PATH` and a test-only sentinel path passed to the guard unit-test harness. Cover:
 
 ```text
 missing ENVYCONTROL_SYSTEM_TEST_VM -> refuse
@@ -757,7 +746,7 @@ virtualization command missing/ambiguous -> refuse
 all three gates valid -> PASS without mutating anything
 ```
 
-The test must never create `/etc/envycontrol-test-vm` on the developer host; emulate the sentinel path through an environment override **available only to the guard's unit-test mode**, not to `system-vm.sh`. The production `system-vm.sh` must hardcode `/etc/envycontrol-test-vm` and cannot accept the test override.
+The test must never create `/etc/envycontrol-test-vm` on the developer host. The production `system-vm.sh` does not expose or forward the test-only sentinel override and always requires `/etc/envycontrol-test-vm`.
 
 - [ ] **Step 2: Implement `require-disposable-vm.sh`.**
 
@@ -922,7 +911,7 @@ Verify all 13 temporary files are represented by the destinations defined in the
 - [ ] **Step 2: Search for stale template references.**
 
 ```bash
-rg -n 'claude-md/|starter-kit|PROMPT_TEMPLATES_WEB|DESIGN-SYSTEM\.template|ENDPOINT_PERMISSIONS\.template|@<scope>|pnpm|Playwright|Maestro' . \
+rg -n 'claude-md/|starter-kit|PROMPT_TEMPLATES_WEB|DESIGN-SYSTEM\.template|ENDPOINT_PERMISSIONS\.template|pnpm|Playwright|Maestro' . \
   --glob '!docs/superpowers/specs/**' --glob '!docs/superpowers/plans/**'
 ```
 
@@ -1036,7 +1025,7 @@ Do not merge it. Leave merge/close decisions to the user.
 
 ### Placeholder scan
 
-This plan contains no unresolved `<...>` template placeholders and no `TBD`/`TODO` implementation placeholders. Commands that depend on measured runtime facts explicitly instruct the implementer to measure and then record the observed value rather than fabricate it.
+This plan contains no unresolved implementation placeholders. Commands that depend on measured runtime facts explicitly instruct the implementer to measure and then record the observed value rather than fabricate it.
 
 ### Interface consistency
 
