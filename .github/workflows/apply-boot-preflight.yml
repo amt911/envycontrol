@@ -1,0 +1,81 @@
+name: Apply boot preflight integration
+
+on:
+  push:
+    branches:
+      - feat/boot-rebuild-backends
+    paths:
+      - .github/workflows/apply-boot-preflight.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/boot-rebuild-backends
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Apply deterministic integration patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('envycontrol.py')
+          text = path.read_text()
+
+          old_imports = "import shutil\nfrom contextlib import contextmanager\n"
+          new_imports = "import shutil\nfrom contextlib import contextmanager\n\nimport envycontrol_boot as boot\n"
+          assert old_imports in text
+          text = text.replace(old_imports, new_imports, 1)
+
+          old_start = "def graphics_mode_switcher(graphics_mode, user_display_manager, enable_force_comp, coolbits_value, rtd3_value, use_nvidia_current):\n    print(f\"Switching to {graphics_mode} mode\")\n"
+          new_start = "def graphics_mode_switcher(graphics_mode, user_display_manager, enable_force_comp, coolbits_value, rtd3_value, use_nvidia_current):\n    boot_plan = resolve_boot_rebuild_plan()\n    print(f\"Switching to {graphics_mode} mode\")\n"
+          assert old_start in text
+          text = text.replace(old_start, new_start, 1)
+
+          start = text.index('def graphics_mode_switcher(')
+          end = text.index('\ndef cleanup():', start)
+          block = text[start:end]
+          assert block.count('        rebuild_initramfs()') == 3
+          block = block.replace('        rebuild_initramfs()\n', '')
+          old_tail = "    print('Operation completed successfully')\n    print('Please reboot your computer for changes to take effect!')\n"
+          new_tail = "    boot_plan.execute(\n        boot.SubprocessCommandRunner(),\n        verbose=logging.getLogger().level == logging.DEBUG,\n    )\n    print('Operation completed successfully')\n    print('Please reboot your computer for changes to take effect!')\n"
+          assert old_tail in block
+          block = block.replace(old_tail, new_tail, 1)
+          text = text[:start] + block + text[end:]
+
+          marker = '\ndef rebuild_initramfs():\n'
+          assert marker in text
+          helper = "\ndef resolve_boot_rebuild_plan():\n    probe = boot.LocalSystemProbe()\n    return boot.default_boot_rebuild_coordinator().resolve(probe)\n\n\n"
+          text = text.replace(marker, helper + marker, 1)
+          path.write_text(text)
+
+          modes = Path('tests/test_modes.py')
+          mode_text = modes.read_text()
+          insert_after = "def _fake_run_recorder(monkeypatch, calls, returncode=0):\n    monkeypatch.setattr(\n        envycontrol.subprocess,\n        \"run\",\n        lambda args, **kwargs: calls.append(tuple(args)) or SimpleNamespace(returncode=returncode),\n    )\n\n\n"
+          assert insert_after in mode_text
+          helper_text = "def _fake_boot_plan(monkeypatch, calls):\n    class FakePlan:\n        def execute(self, runner, verbose=False):\n            calls.append((\"initramfs\",))\n\n    monkeypatch.setattr(envycontrol, \"resolve_boot_rebuild_plan\", lambda: FakePlan())\n\n\n"
+          mode_text = mode_text.replace(insert_after, insert_after + helper_text, 1)
+          mode_text = mode_text.replace('    monkeypatch.setattr(envycontrol, \"rebuild_initramfs\", lambda: calls.append((\"initramfs\",)))\n', '    _fake_boot_plan(monkeypatch, calls)\n')
+          mode_text = mode_text.replace('    monkeypatch.setattr(envycontrol, \"rebuild_initramfs\", lambda: None)\n', '    _fake_boot_plan(monkeypatch, [])\n')
+          modes.write_text(mode_text)
+          PY
+      - name: Install test dependencies
+        run: |
+          python -m pip install -e .
+          python -m pip install -r requirements-dev.txt
+      - name: Verify GREEN
+        run: python -m pytest tests/test_boot_preflight.py tests/test_modes.py -v
+      - name: Commit integration and remove temporary workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/apply-boot-preflight.yml
+          git add envycontrol.py tests/test_modes.py
+          git commit -m 'fix: preflight boot rebuild before GPU mode changes'
+          git push origin HEAD:feat/boot-rebuild-backends
