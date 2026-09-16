@@ -1,0 +1,98 @@
+name: Format Superpowers docs
+
+on:
+  push:
+    branches:
+      - feat/boot-rebuild-backends
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v7
+        with:
+          ref: feat/boot-rebuild-backends
+
+      - name: Normalize Markdown without changing semantics
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          paths = [
+              Path('docs/superpowers/specs/2026-09-16-boot-rebuild-backends-design.md'),
+              Path('docs/superpowers/plans/2026-09-16-boot-rebuild-backends.md'),
+          ]
+
+          def normalize(text: str) -> str:
+              original_lines = text.splitlines()
+              lines: list[str] = []
+              in_fence = False
+
+              for line in original_lines:
+                  stripped = line.lstrip()
+                  if stripped.startswith('```'):
+                      in_fence = not in_fence
+                      lines.append(line)
+                      continue
+
+                  if not in_fence:
+                      line = re.sub(
+                          r'(?<![<(])(https://wiki\.archlinux\.org/\S+)',
+                          r'<\1>',
+                          line,
+                      )
+                  lines.append(line)
+
+              out: list[str] = []
+              in_fence = False
+              index = 0
+              while index < len(lines):
+                  line = lines[index]
+                  stripped = line.lstrip()
+                  if stripped.startswith('```'):
+                      in_fence = not in_fence
+                      out.append(line)
+                      index += 1
+                      continue
+
+                  is_list = (not in_fence) and re.match(r'^\s*[-*+]\s+\S', line) is not None
+                  if is_list:
+                      if out and out[-1] != '':
+                          out.append('')
+                      while index < len(lines):
+                          item = lines[index]
+                          if re.match(r'^\s*[-*+]\s+\S', item) is None:
+                              break
+                          out.append(item)
+                          index += 1
+                      if index < len(lines) and lines[index] != '':
+                          out.append('')
+                      continue
+
+                  out.append(line)
+                  index += 1
+
+              return '\n'.join(out).rstrip() + '\n'
+
+          for path in paths:
+              before = path.read_text(encoding='utf-8')
+              after = normalize(before)
+              path.write_text(after, encoding='utf-8')
+          PY
+
+      - name: Commit formatting-only changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git diff --quiet -- docs/superpowers; then
+            exit 0
+          fi
+          git add docs/superpowers
+          git commit -m 'docs: normalize superpowers markdown'
+          git push origin HEAD:feat/boot-rebuild-backends
