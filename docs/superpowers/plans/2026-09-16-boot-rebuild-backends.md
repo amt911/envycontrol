@@ -31,11 +31,13 @@
 ### Task 1: Boot Domain Types, Errors, and Read-Only Probe
 
 **Files:**
+
 - Create: `envycontrol_boot.py`
 - Create: `tests/test_boot_probe.py`
 - Modify: `setup.py`
 
 **Interfaces:**
+
 - Produces: `EvidenceKind`, `DetectionEvidence`, `DetectionResult`, `CommandResult`, `SystemProbe`, `LocalSystemProbe`, `BootRebuildError`, `NoBootBackendFoundError`, `AmbiguousBootBackendError`, `UnsupportedBootIntegrationError`, `BootRebuildCommandError`.
 - Later tasks consume these exact names.
 
@@ -179,11 +181,13 @@ git commit -m "feat: add boot rebuild domain boundaries"
 ### Task 2: Initramfs Backend Protocol and Existing Distro Characterization
 
 **Files:**
+
 - Modify: `envycontrol_boot.py`
 - Create: `tests/test_boot_backends.py`
 - Modify: `tests/test_initramfs.py`
 
 **Interfaces:**
+
 - Consumes: `SystemProbe`, `DetectionResult`, `DetectionEvidence`, `EvidenceKind`.
 - Produces: `InitramfsBackend`, `RpmOstreeBackend`, `UpdateInitramfsBackend`, `DracutBackend`, `MakeInitrdBackend`, `MkinitcpioBackend`, `BoosterBackend`.
 
@@ -259,10 +263,12 @@ git commit -m "feat: add initramfs backend implementations"
 ### Task 3: Arch Evidence Detection for mkinitcpio, dracut, and Booster
 
 **Files:**
+
 - Modify: `envycontrol_boot.py`
 - Create: `tests/test_boot_detection.py`
 
 **Interfaces:**
+
 - Produces backend `detect()` behavior using exact `EvidenceKind` precedence.
 - Detection remains read-only and must not execute rebuild commands.
 
@@ -342,10 +348,12 @@ git commit -m "feat: detect configured Arch initramfs generators"
 ### Task 4: Resolver and Ambiguity Handling
 
 **Files:**
+
 - Modify: `envycontrol_boot.py`
 - Create: `tests/test_boot_resolver.py`
 
 **Interfaces:**
+
 - Produces: `BootBackendResolver.resolve(probe) -> InitramfsBackend`.
 - Raises: `NoBootBackendFoundError`, `AmbiguousBootBackendError`.
 
@@ -419,11 +427,13 @@ git commit -m "feat: resolve boot backend from configuration evidence"
 ### Task 5: Preserve Non-Arch Distribution Behavior
 
 **Files:**
+
 - Modify: `envycontrol_boot.py`
 - Modify: `tests/test_boot_resolver.py`
 - Modify: `tests/test_initramfs.py`
 
 **Interfaces:**
+
 - Resolver default registry must preserve rpm-ostree, Debian/Ubuntu, RHEL/SUSE, ALT behavior.
 
 - [ ] **Step 1: Add RED characterization tests through the new resolver**
@@ -467,10 +477,12 @@ git commit -m "feat: preserve distro boot rebuild compatibility"
 ### Task 6: kernel-install and UKI Orchestration
 
 **Files:**
+
 - Modify: `envycontrol_boot.py`
 - Create: `tests/test_kernel_install.py`
 
 **Interfaces:**
+
 - Produces: `KernelInstallConfig`, `KernelInstallStrategy`, `BootArtifactStrategy` protocol if needed by composition.
 - `KernelInstallStrategy.detect(probe)` parses `/etc/kernel/install.conf` defensively.
 - Explicit `initrd_generator=` outranks weak backend evidence.
@@ -534,10 +546,12 @@ git commit -m "feat: support kernel-install and UKI orchestration"
 ### Task 7: Limine Integration Resolution
 
 **Files:**
+
 - Modify: `envycontrol_boot.py`
 - Create: `tests/test_limine_integration.py`
 
 **Interfaces:**
+
 - Produces: `BootloaderIntegration` protocol and `LimineIntegration`.
 - Raises `UnsupportedBootIntegrationError` for detected Limine setups whose update path cannot be proven safe.
 
@@ -588,10 +602,12 @@ git commit -m "feat: resolve Limine boot integration safely"
 ### Task 8: Immutable BootRebuildPlan and Safe Command Execution
 
 **Files:**
+
 - Modify: `envycontrol_boot.py`
 - Create: `tests/test_boot_plan.py`
 
 **Interfaces:**
+
 - Produces: `CommandRunner`, `SubprocessCommandRunner`, `BootStage`, `BootRebuildPlan`, `BootRebuildCoordinator`.
 - `BootRebuildCoordinator.resolve(probe) -> BootRebuildPlan`.
 - `BootRebuildPlan.execute(runner, verbose=False)` raises `BootRebuildCommandError` on non-zero stage result.
@@ -657,12 +673,14 @@ git commit -m "feat: add validated boot rebuild plans"
 ### Task 9: Preflight Integration into Graphics Mode Switching
 
 **Files:**
+
 - Modify: `envycontrol.py`
 - Modify: `tests/test_modes.py`
 - Modify: `tests/test_initramfs.py`
 - Create: `tests/test_boot_preflight.py`
 
 **Interfaces:**
+
 - `graphics_mode_switcher(...)` resolves a `BootRebuildPlan` before any mode mutation for all switch modes.
 - Existing `rebuild_initramfs()` becomes a compatibility wrapper around the new coordinator or is removed only after all call sites/tests move.
 
@@ -726,12 +744,14 @@ git commit -m "fix: preflight boot rebuild before GPU mode changes"
 ### Task 10: CLI Error Boundary and Verbose Diagnostics
 
 **Files:**
+
 - Modify: `envycontrol.py`
 - Modify: `tests/test_cli.py`
 - Modify: `docs/CLI_CONTRACT.md`
 - Modify: `docs/COMMAND_PERMISSIONS.md`
 
 **Interfaces:**
+
 - CLI catches `BootRebuildError` at one boundary.
 - Preflight failures print/log actionable diagnostics and exit non-zero without claiming operation completion.
 
@@ -779,6 +799,7 @@ git commit -m "feat: report boot preflight failures safely"
 ### Task 11: Host-Safety Guards and Disposable-VM Harness Coverage
 
 **Files:**
+
 - Modify: `tests/conftest.py`
 - Modify: `tests/test_host_safety.py`
 - Modify: `scripts/verify/system-vm.sh`
@@ -786,6 +807,7 @@ git commit -m "feat: report boot preflight failures safely"
 - Add fixtures under: `tests/system/fixtures/bin/` only when a newly supported command needs a fake executable.
 
 **Interfaces:**
+
 - Normal pytest must block real `kernel-install`, `ukify`, Booster regeneration and Limine mutation commands in addition to existing dangerous commands.
 - VM script remains gated by `ENVYCONTROL_SYSTEM_TEST_VM=1`, `/etc/envycontrol-test-vm`, and positive `systemd-detect-virt --vm`.
 
@@ -834,6 +856,7 @@ git commit -m "test: guard new boot rebuild commands"
 ### Task 12: Mutation Ratchet, Documentation, Full Verification, and PR
 
 **Files:**
+
 - Modify: `pyproject.toml`
 - Modify: `scripts/run-mutation.sh` only if required to include the new module correctly
 - Modify: `CLAUDE.md`
@@ -843,6 +866,7 @@ git commit -m "test: guard new boot rebuild commands"
 - Modify: `README.md` only if user-facing supported boot mechanisms need a concise note
 
 **Interfaces:**
+
 - Mutation scope includes both `envycontrol.py` and `envycontrol_boot.py`.
 - Final score must be >=60% before completion.
 

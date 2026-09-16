@@ -17,16 +17,16 @@ The result is unsafe and not extensible enough for current Arch boot setups such
 The design is based on current Arch Linux documentation as of 2026-09-16:
 
 - Arch supports mkinitcpio, dracut and Booster as initramfs generators.
-  - https://wiki.archlinux.org/title/Dracut
-  - https://wiki.archlinux.org/title/Booster
+  - <https://wiki.archlinux.org/title/Dracut>
+  - <https://wiki.archlinux.org/title/Booster>
 - The documented dracut all-kernel rebuild command is `dracut -f --regenerate-all`.
 - Booster provides `/usr/lib/booster/regenerate_images` to regenerate images for installed kernels.
 - `kernel-install` can explicitly configure `layout=`, `initrd_generator=` and `uki_generator=` in `/etc/kernel/install.conf`, and `kernel-install inspect --verbose` can explain resolved defaults.
-  - https://wiki.archlinux.org/title/Kernel-install
+  - <https://wiki.archlinux.org/title/Kernel-install>
 - `ukify` does not generate an initramfs by itself; it consumes an initramfs produced by another generator.
-  - https://wiki.archlinux.org/title/Unified_kernel_image
+  - <https://wiki.archlinux.org/title/Unified_kernel_image>
 - Limine has generator-specific automation such as `limine-dracut-support` and `limine-mkinitcpio-hook`; therefore Limine must not be treated as an initramfs generator.
-  - https://wiki.archlinux.org/title/Limine
+  - <https://wiki.archlinux.org/title/Limine>
 
 These facts shape the architecture below. The implementation must not collapse initramfs generation, UKI composition and bootloader integration into one interchangeable backend type.
 
