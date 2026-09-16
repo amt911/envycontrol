@@ -36,6 +36,20 @@ def test_new_boot_tools_are_classified_as_dangerous_before_execution():
     assert required <= DANGEROUS_RUN_COMMANDS
 
 
+@pytest.mark.parametrize(
+    ("command", "name"),
+    [
+        (["/usr/lib/booster/regenerate_images"], "regenerate_images"),
+        (["/usr/bin/kernel-install", "add-all"], "kernel-install"),
+        (["/usr/bin/ukify", "build", "--linux", "/boot/vmlinuz-linux"], "ukify"),
+        (["/usr/bin/limine-update"], "limine-update"),
+    ],
+)
+def test_new_boot_tool_execution_is_blocked_even_by_absolute_path(command, name):
+    with pytest.raises(RuntimeError, match=rf"blocked dangerous command: {name}"):
+        envycontrol.subprocess.run(command)
+
+
 def test_tmp_path_write_is_allowed(tmp_path):
     target = tmp_path / "generated.conf"
     envycontrol.create_file(str(target), "safe")
