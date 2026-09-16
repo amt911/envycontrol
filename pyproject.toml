@@ -31,3 +31,5 @@ no_implicit_optional = true
 [tool.mutmut]
 source_paths = ["envycontrol.py"]
 pytest_add_cli_args_test_selection = ["tests/"]
+also_copy = ["scripts/", "CLAUDE.md", "AGENTS.md"]
+mutate_only_covered_lines = true
