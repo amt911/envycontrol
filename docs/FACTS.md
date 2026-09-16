@@ -1,6 +1,6 @@
 # FACTS — EnvyControl
 
-Verified working memory for agents. One fact per line; facts must include how and when they were verified. Decisions belong in specs/`CLAUDE.md`; non-obvious environment gotchas belong in `docs/FINDINGS.md`.
+Verified working memory for agents. One fact per line; facts must include how and when they were verified. Decisions belong in specs/`AGENTS.md`; non-obvious environment gotchas belong in `docs/FINDINGS.md`.
 
 ## Architecture and packaging
 

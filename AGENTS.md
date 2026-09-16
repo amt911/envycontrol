@@ -12,6 +12,24 @@ EnvyControl is a Python CLI for switching NVIDIA Optimus graphics modes on Linux
 - `docs/COMMAND_PERMISSIONS.md` is authoritative for command privilege and side-effect boundaries. Update it in the same change that changes a CLI operation or system side effect.
 - If Graphify is available, run it at session start and update it after structural changes. If it is unavailable, inspect the repository directly and state that Graphify was unavailable; never invent graph output.
 
+## Agent compatibility — Codex and Claude Code
+
+This file is `AGENTS.md`: the **one** instruction file for every coding agent in this repo. Codex reads it directly; Claude Code reads `CLAUDE.md`, which only imports this file (`@AGENTS.md`) and holds what applies to Claude alone. **Edit rules here, never in `CLAUDE.md`** — two copies of a rule drift apart on the first edit, and each agent then obeys a different one.
+
+| Concern | Claude Code | Codex |
+| --- | --- | --- |
+| Instruction file | `CLAUDE.md` → imports `AGENTS.md` | `AGENTS.md` (root down to the working directory) |
+| Invoke a skill | `Skill` tool, or `/<skill>` | mention it (`$<skill>`), or let it trigger from its description |
+| Skills on disk | `~/.claude/skills` (links into `~/.agents/skills`) | `.agents/skills`, then `~/.agents/skills` |
+| superpowers | `superpowers@claude-plugins-official` (`/plugin install`) | `superpowers@openai-curated` (install from `/plugins`; that id is its key in `~/.codex/config.toml`) |
+| MCP servers | `claude mcp add -s user <name> -- <cmd>` | `codex mcp add <name> -- <cmd>` (`~/.codex/config.toml`) |
+| File size | imports load whole | `project_doc_max_bytes`, **32 KiB by default** — raise it when this file is bigger, or the tail is silently dropped |
+
+- **Install shared skills once, for both agents:** `npx skills add <owner/repo> -g --skill <name>` writes to `~/.agents/skills` and links it for Claude Code, so both run the same version.
+- **Names in this file are capabilities, not one agent's syntax.** "Invoke the `X` skill" means the `Skill` tool in Claude Code and a skill mention in Codex. An MCP server named here is used when it is registered for the agent you are running in; its absence never blocks ordinary work.
+- **Modes, model caps and Git rules bind both agents.** "lite mode", "normal mode" and "modo desatendido" mean the same in Codex; a cap written as "no model above Sonnet" means "no model above the mid tier" there.
+- **Claude-only commands** (`/graphify` and other slash commands that are not skills) are skipped by Codex unless the same capability is installed as a skill in `~/.agents/skills`.
+
 ## Safety invariant: disposable VM only
 
 This rule overrides convenience, speed and confidence in cleanup.
@@ -177,6 +195,8 @@ It must:
 6. report missing regressions or undocumented behavior;
 7. post a readable verdict and wait for the human decision.
 
+The verdict also reads structure: name any new [SOLID](#design-principles--solid-applied-with-judgement) violation the diff introduces — a growing `if`/`elif` chain, IO leaking into a decision function, a speculative interface — as a finding, not a veto.
+
 **The verifier must never perform destructive testing on the current workstation.** If no valid disposable VM is available, VM-required cases are **`NOT EXECUTED`**. It must not fall back to the host or claim PASS from mocked tests.
 
 ## Agent orchestration
@@ -197,12 +217,38 @@ Before creating a helper, script, fixture or abstraction, search `envycontrol.py
 - Do not add a dependency merely to avoid a small, clear standard-library implementation.
 - A deliberate duplicate should be explained in the PR.
 
+## Design principles — SOLID, applied with judgement
+
+SOLID is a list of **symptoms to look for**, not a pattern to apply. Every one of the five exists to keep a change local: the useful question is *how many files does the next plausible change touch, and how many of them do you have to understand first?* Applied by rote it produces the opposite — an interface per class, a factory for one product, a needlessly split module — so here it is bounded by YAGNI and by [Reuse first](#reuse-first).
+
+| Principle | Checkable smell | Usual fix |
+| --- | --- | --- |
+| **S — Single responsibility**: one reason to change | the description needs "and"; a function changes in PRs about unrelated features; a test mocks things unrelated to what it asserts | split along the reason to change — detection, decision, IO |
+| **O — Open/closed**: extend without editing | adding a distro/display-manager/mode edits a growing `if`/`elif` chain in several places (e.g. `rebuild_initramfs()`); one boolean flag per variant | a lookup table or registry keyed by the discriminator — introduced at the second real case, not the first |
+| **L — Liskov substitution**: subtypes keep the contract | an override throws "not supported"; callers check the concrete type before calling | narrow the base contract, or stop inheriting and compose |
+| **I — Interface segregation**: clients see only what they use | a fake implements methods the test never calls; a whole config/args object is passed to read two fields | split by client need; pass the fields, not the bag |
+| **D — Dependency inversion**: policy does not import mechanism | mode-inference or config-generation logic calls `subprocess`, `os.system` or touches the filesystem directly; a unit test needs root, a real GPU or a real display manager | depend on a seam the caller owns (a parameter, a fake-able adapter function); wire the real `subprocess`/filesystem call only at the CLI entry point |
+
+### Where the seams go, in this codebase
+
+| Layer | Seams |
+| --- | --- |
+| `envycontrol.py` | pure functions for decisions (mode inference, config generation, PCI parsing); IO — `subprocess`, filesystem writes, `systemctl`, initramfs tools — stays at the CLI entry point and adapter functions; a `Protocol`/callable parameter only when a second implementation or a test fake needs it |
+
+### Where SOLID stops
+
+- **No interface, abstract class or factory without one of:** a second real implementation, an IO boundary (filesystem, subprocess, hardware, clock, randomness), or a test that cannot be written without the seam. "We might swap it later" is not on the list.
+- **Reuse first beats speculative extension points** — add the parameter to the existing function before inventing a plugin system for it.
+- **Speculative abstraction is a review finding**, exactly like a violation: an interface with one implementation and no IO behind it gets inlined.
+- **Refactor toward SOLID when a change hurts**, in the PR that felt the pain — not as a drive-by rewrite of code nobody is changing.
+
 ## Working rules
 
 - **VM-only destructive verification is non-negotiable.** GPU switching, initramfs rebuilds, systemd/service changes and machine-global file mutations run only in the disposable VM. Without it: **`NOT EXECUTED`**; never host fallback.
 - TDD is mandatory for new logic and bug fixes.
 - Run full/heavy jobs inside the 6 GB memory cgroup.
-- Keep `CLAUDE.md` and `AGENTS.md` byte-for-byte identical; `tests/test_agent_docs.py` enforces it.
+- `AGENTS.md` is canonical; `CLAUDE.md` is a one-line shim (`@AGENTS.md`) for Claude Code. Edit rules only in `AGENTS.md` — see [Agent compatibility](#agent-compatibility--codex-and-claude-code).
+- **SOLID where it pays, not by rote** — split `envycontrol.py` functions by reason to change, extend distro/mode/display-manager handling through a lookup table instead of a growing `if`/`elif` chain, and keep IO (subprocess, filesystem, hardware probes) behind a seam the CLI entry point wires. No abstraction without a second implementation, an IO boundary or a test seam. See [Design principles](#design-principles--solid-applied-with-judgement).
 - Preserve `setup.py` and the console entry point unless a separately approved packaging migration says otherwise.
 - Keep runtime dependencies minimal; test/development tools do not belong in `setup.py` runtime requirements.
 - Update `docs/CLI_CONTRACT.md` when observable CLI behavior changes.
