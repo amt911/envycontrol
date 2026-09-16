@@ -16,7 +16,10 @@ target-version = "py310"
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+# Start with correctness-oriented rules on the legacy single-file runtime.
+# Import sorting / pyupgrade / simplify are intentionally a future ratchet so this
+# infrastructure PR does not mix behavioral characterization with cosmetic churn.
+select = ["E", "F", "W", "B"]
 ignore = ["E501", "E711", "E712"]
 
 [tool.mypy]
