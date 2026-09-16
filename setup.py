@@ -11,7 +11,7 @@ setup(
     author='Victor Bayas',
     author_email='victorsbayas@gmail.com',
     license='MIT',
-    py_modules=['envycontrol'],
+    py_modules=['envycontrol', 'envycontrol_boot'],
     entry_points={
         'console_scripts': [
             'envycontrol=envycontrol:main',
