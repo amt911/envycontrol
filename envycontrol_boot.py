@@ -76,6 +76,63 @@ class LocalSystemProbe:
             return None
 
 
+class InitramfsBackend(Protocol):
+    name: str
+
+    def detect(self, probe: SystemProbe) -> DetectionResult: ...
+
+    def build_command(self, probe: SystemProbe) -> tuple[str, ...]: ...
+
+
+class _BaseBackend:
+    name = ""
+
+    def detect(self, probe: SystemProbe) -> DetectionResult:
+        return DetectionResult(self.name, (), eligible=False)
+
+
+class RpmOstreeBackend(_BaseBackend):
+    name = "rpm-ostree"
+
+    def build_command(self, probe: SystemProbe) -> tuple[str, ...]:
+        return ("rpm-ostree", "initramfs", "--enable", "--arg=--force")
+
+
+class UpdateInitramfsBackend(_BaseBackend):
+    name = "update-initramfs"
+
+    def build_command(self, probe: SystemProbe) -> tuple[str, ...]:
+        return ("update-initramfs", "-u", "-k", "all")
+
+
+class DracutBackend(_BaseBackend):
+    name = "dracut"
+
+    def build_command(self, probe: SystemProbe) -> tuple[str, ...]:
+        return ("dracut", "-f", "--regenerate-all")
+
+
+class MakeInitrdBackend(_BaseBackend):
+    name = "make-initrd"
+
+    def build_command(self, probe: SystemProbe) -> tuple[str, ...]:
+        return ("make-initrd",)
+
+
+class MkinitcpioBackend(_BaseBackend):
+    name = "mkinitcpio"
+
+    def build_command(self, probe: SystemProbe) -> tuple[str, ...]:
+        return ("mkinitcpio", "-P")
+
+
+class BoosterBackend(_BaseBackend):
+    name = "booster"
+
+    def build_command(self, probe: SystemProbe) -> tuple[str, ...]:
+        return ("/usr/lib/booster/regenerate_images",)
+
+
 class BootRebuildError(RuntimeError):
     pass
 
