@@ -26,13 +26,14 @@ echo "==> host-safe pytest"
 "$PYTHON" -m pytest -v
 
 echo "==> branch coverage gate"
-"$PYTHON" -m pytest --cov=envycontrol --cov-branch --cov-report=term-missing
+"$PYTHON" -m pytest \
+  --cov=envycontrol --cov=envycontrol_boot --cov-branch --cov-report=term-missing
 
 echo "==> Ruff"
-ruff check envycontrol.py tests scripts
+ruff check envycontrol.py envycontrol_boot.py tests scripts
 
 echo "==> mypy"
-mypy envycontrol.py
+mypy envycontrol.py envycontrol_boot.py
 
 echo "==> agent instructions: CLAUDE.md only imports AGENTS.md"
 grep -qx '@AGENTS.md' CLAUDE.md && ! grep -q '^## ' CLAUDE.md
@@ -43,13 +44,13 @@ echo "==> safe CLI smoke"
 echo "==> packaging smoke"
 "$PYTHON" -m pip install -e .
 envycontrol --version
-"$PYTHON" -c 'import envycontrol; assert envycontrol.VERSION == "3.5.2"'
+"$PYTHON" -c 'import envycontrol, envycontrol_boot; assert envycontrol.VERSION == "3.5.2"'
 
 if [[ "$RUN_MUTATION" == "1" ]]; then
-  echo "==> mutation quality"
-  ./scripts/run-mutation.sh --advisory
+  echo "==> blocking mutation quality"
+  ./scripts/run-mutation.sh
 else
-  echo "Mutation: NOT EXECUTED — set RUN_MUTATION=1 to run the current mutation policy"
+  echo "Mutation: NOT EXECUTED — set RUN_MUTATION=1 to run the blocking >=60% gate"
 fi
 
 if [[ "$RUN_SYSTEM_VM" == "1" ]]; then
