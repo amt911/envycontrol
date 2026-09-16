@@ -44,6 +44,16 @@ def test_read_cache_restores_cached_bus(monkeypatch, tmp_path):
     assert config.get_nvidia_gpu_pci_bus() == "PCI:10:31:3"
 
 
+def test_read_missing_cache_in_hybrid_detects_bus(monkeypatch, tmp_path):
+    _configure_cache(monkeypatch, tmp_path, mode="hybrid")
+    monkeypatch.setattr(envycontrol, "get_nvidia_gpu_pci_bus", lambda: "PCI:9:0:0")
+    config = envycontrol.CachedConfig(SimpleNamespace())
+
+    config.read_cache_file()
+
+    assert config.get_nvidia_gpu_pci_bus() == "PCI:9:0:0"
+
+
 def test_read_missing_cache_outside_hybrid_raises(monkeypatch, tmp_path):
     _configure_cache(monkeypatch, tmp_path, mode="nvidia")
     config = envycontrol.CachedConfig(SimpleNamespace())
@@ -55,6 +65,16 @@ def test_show_missing_cache_prints_error(monkeypatch, tmp_path, capsys):
     cache_path = _configure_cache(monkeypatch, tmp_path)
     envycontrol.CachedConfig.show_cache_file()
     assert str(cache_path) in capsys.readouterr().out
+
+
+def test_show_existing_cache_prints_json(monkeypatch, tmp_path, capsys):
+    cache_path = _configure_cache(monkeypatch, tmp_path)
+    cache_path.parent.mkdir(parents=True)
+    cache_path.write_text('{"nvidia_gpu_pci_bus":"PCI:2:0:0"}')
+
+    envycontrol.CachedConfig.show_cache_file()
+
+    assert '"nvidia_gpu_pci_bus":"PCI:2:0:0"' in capsys.readouterr().out
 
 
 def test_delete_cache_removes_file_and_cache_directories(monkeypatch, tmp_path):
@@ -93,3 +113,18 @@ def test_hybrid_adapter_refreshes_cache(monkeypatch, tmp_path):
         pass
 
     assert json.loads(cache_path.read_text()) == {"nvidia_gpu_pci_bus": "PCI:7:0:0"}
+
+
+def test_create_file_can_mark_temporary_script_executable(monkeypatch, tmp_path):
+    calls = []
+    target = tmp_path / "script.sh"
+    monkeypatch.setattr(
+        envycontrol.subprocess,
+        "run",
+        lambda args, **kwargs: calls.append((tuple(args), kwargs)) or SimpleNamespace(returncode=0),
+    )
+
+    envycontrol.create_file(str(target), "#!/bin/sh\n", executable=True)
+
+    assert target.read_text() == "#!/bin/sh\n"
+    assert calls[0][0] == ("chmod", "+x", str(target))

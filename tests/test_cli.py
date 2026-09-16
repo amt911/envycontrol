@@ -1,6 +1,7 @@
 import logging
 import subprocess
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -60,3 +61,114 @@ def test_cache_query_dispatches_without_root(monkeypatch):
     monkeypatch.setattr(envycontrol.CachedConfig, "show_cache_file", lambda: called.append(True))
     envycontrol.main()
     assert called == [True]
+
+
+def _install_fake_cached_config(monkeypatch, calls):
+    class FakeCachedConfig:
+        def __init__(self, args):
+            calls.append(("cached-init", args))
+
+        @contextmanager
+        def adapter(self):
+            calls.append(("adapter-enter",))
+            yield
+            calls.append(("adapter-exit",))
+
+        def create_cache_file(self):
+            calls.append(("cache-create",))
+
+        @staticmethod
+        def delete_cache_file():
+            calls.append(("cache-delete",))
+
+        @staticmethod
+        def show_cache_file():
+            calls.append(("cache-query",))
+
+    monkeypatch.setattr(envycontrol, "CachedConfig", FakeCachedConfig)
+
+
+def test_main_cache_create_checks_root_and_dispatches(monkeypatch):
+    calls = []
+    _install_fake_cached_config(monkeypatch, calls)
+    monkeypatch.setattr(sys, "argv", ["envycontrol", "--cache-create"])
+    monkeypatch.setattr(envycontrol, "assert_root", lambda: calls.append(("root",)))
+
+    envycontrol.main()
+
+    labels = [entry[0] for entry in calls]
+    assert labels == ["root", "cached-init", "cache-create"]
+
+
+def test_main_cache_delete_checks_root_and_dispatches(monkeypatch):
+    calls = []
+    _install_fake_cached_config(monkeypatch, calls)
+    monkeypatch.setattr(sys, "argv", ["envycontrol", "--cache-delete"])
+    monkeypatch.setattr(envycontrol, "assert_root", lambda: calls.append(("root",)))
+
+    envycontrol.main()
+
+    assert [entry[0] for entry in calls] == ["root", "cache-delete"]
+
+
+def test_main_switch_dispatches_inside_cache_adapter(monkeypatch):
+    calls = []
+    _install_fake_cached_config(monkeypatch, calls)
+    monkeypatch.setattr(sys, "argv", ["envycontrol", "--switch", "integrated"])
+    monkeypatch.setattr(envycontrol, "assert_root", lambda: calls.append(("root",)))
+    monkeypatch.setattr(
+        envycontrol,
+        "graphics_mode_switcher",
+        lambda *args: calls.append(("switch",) + args),
+    )
+
+    envycontrol.main()
+
+    labels = [entry[0] for entry in calls]
+    assert labels == ["cached-init", "adapter-enter", "root", "switch", "adapter-exit"]
+
+
+def test_main_reset_sddm_dispatches_inside_cache_adapter(monkeypatch):
+    calls = []
+    _install_fake_cached_config(monkeypatch, calls)
+    monkeypatch.setattr(sys, "argv", ["envycontrol", "--reset-sddm"])
+    monkeypatch.setattr(envycontrol, "assert_root", lambda: calls.append(("root",)))
+    monkeypatch.setattr(
+        envycontrol,
+        "create_file",
+        lambda path, content, executable=False: calls.append(
+            ("create", path, content, executable)
+        ),
+    )
+
+    envycontrol.main()
+
+    labels = [entry[0] for entry in calls]
+    assert labels == ["cached-init", "adapter-enter", "root", "create", "adapter-exit"]
+    assert calls[3][1:] == (
+        envycontrol.SDDM_XSETUP_PATH,
+        envycontrol.SDDM_XSETUP_CONTENT,
+        True,
+    )
+
+
+def test_main_reset_dispatches_cleanup_cache_and_initramfs(monkeypatch):
+    calls = []
+    _install_fake_cached_config(monkeypatch, calls)
+    monkeypatch.setattr(sys, "argv", ["envycontrol", "--reset"])
+    monkeypatch.setattr(envycontrol, "assert_root", lambda: calls.append(("root",)))
+    monkeypatch.setattr(envycontrol, "cleanup", lambda: calls.append(("cleanup",)))
+    monkeypatch.setattr(envycontrol, "rebuild_initramfs", lambda: calls.append(("initramfs",)))
+
+    envycontrol.main()
+
+    labels = [entry[0] for entry in calls]
+    assert labels == [
+        "cached-init",
+        "adapter-enter",
+        "root",
+        "cleanup",
+        "cache-delete",
+        "initramfs",
+        "adapter-exit",
+    ]
