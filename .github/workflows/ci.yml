@@ -1,150 +1,53 @@
-name: Apply safe boot CLI boundary
+name: CI
 
 on:
   push:
     branches:
-      - feat/boot-rebuild-backends
+      - main
+  pull_request:
+    branches:
+      - main
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  apply:
-    runs-on: ubuntu-24.04
+  test:
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: feat/boot-rebuild-backends
-      - uses: actions/setup-python@v7
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
         with:
           python-version: "3.13"
-      - name: Apply deterministic runtime patch
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install development environment
         run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path('envycontrol.py')
-          text = path.read_text()
-
-          old_signature = "def graphics_mode_switcher(graphics_mode, user_display_manager, enable_force_comp, coolbits_value, rtd3_value, use_nvidia_current):\n    boot_plan = resolve_boot_rebuild_plan()\n"
-          new_signature = "def graphics_mode_switcher(graphics_mode, user_display_manager, enable_force_comp, coolbits_value, rtd3_value, use_nvidia_current, boot_plan=None):\n    if boot_plan is None:\n        boot_plan = resolve_boot_rebuild_plan()\n"
-          assert old_signature in text
-          text = text.replace(old_signature, new_signature, 1)
-
-          old_execute = "    boot_plan.execute(\n        boot.SubprocessCommandRunner(),\n        verbose=logging.getLogger().level == logging.DEBUG,\n    )\n"
-          assert old_execute in text
-          text = text.replace(old_execute, "    execute_boot_rebuild_plan(boot_plan)\n", 1)
-
-          old_helpers = "def resolve_boot_rebuild_plan():\n    probe = boot.LocalSystemProbe()\n    return boot.default_boot_rebuild_coordinator().resolve(probe)\n\n\n\ndef rebuild_initramfs():\n    plan = resolve_boot_rebuild_plan()\n    print('Rebuilding boot artifacts...')\n    plan.execute(\n        boot.SubprocessCommandRunner(),\n        verbose=logging.getLogger().level == logging.DEBUG,\n    )\n    print('Successfully rebuilt boot artifacts!')\n"
-          new_helpers = "def resolve_boot_rebuild_plan():\n    probe = boot.LocalSystemProbe()\n    return boot.default_boot_rebuild_coordinator().resolve(probe)\n\n\ndef execute_boot_rebuild_plan(plan):\n    plan.execute(\n        boot.SubprocessCommandRunner(),\n        verbose=logging.getLogger().level == logging.DEBUG,\n    )\n\n\ndef rebuild_initramfs():\n    plan = resolve_boot_rebuild_plan()\n    print('Rebuilding boot artifacts...')\n    execute_boot_rebuild_plan(plan)\n    print('Successfully rebuilt boot artifacts!')\n\n\n"
-          assert old_helpers in text
-          text = text.replace(old_helpers, new_helpers, 1)
-
-          old_main_lines = [
-              '    if args.switch or args.reset_sddm or args.reset:',
-              '        with CachedConfig(args).adapter():',
-              '            if args.switch:',
-              '                assert_root()',
-              '                graphics_mode_switcher(',
-              '                    args.switch, args.dm,',
-              '                    args.force_comp, args.coolbits, args.rtd3, args.use_nvidia_current',
-              '                )',
-              '            elif args.reset_sddm:',
-              '                assert_root()',
-              '                create_file(SDDM_XSETUP_PATH, SDDM_XSETUP_CONTENT, True)',
-              "                print('Operation completed successfully')",
-              '            elif args.reset:',
-              '                assert_root()',
-              '                cleanup()',
-              '                CachedConfig.delete_cache_file()',
-              '                rebuild_initramfs()',
-              "                print('Operation completed successfully')",
-          ]
-          old_main = '\n'.join(old_main_lines) + '\n'
-
-          new_main_lines = [
-              '    boot_plan = None',
-              '    if args.switch or args.reset:',
-              '        assert_root()',
-              '        try:',
-              '            boot_plan = resolve_boot_rebuild_plan()',
-              '        except (',
-              '            boot.NoBootBackendFoundError,',
-              '            boot.AmbiguousBootBackendError,',
-              '            boot.UnsupportedBootIntegrationError,',
-              '        ) as error:',
-              '            logging.error(str(error))',
-              "            print('No system files were modified.', file=sys.stderr)",
-              '            raise SystemExit(1) from error',
-              '',
-              '    if args.switch or args.reset_sddm or args.reset:',
-              '        with CachedConfig(args).adapter():',
-              '            try:',
-              '                if args.switch:',
-              '                    graphics_mode_switcher(',
-              '                        args.switch, args.dm,',
-              '                        args.force_comp, args.coolbits, args.rtd3, args.use_nvidia_current,',
-              '                        boot_plan=boot_plan,',
-              '                    )',
-              '                elif args.reset_sddm:',
-              '                    assert_root()',
-              '                    create_file(SDDM_XSETUP_PATH, SDDM_XSETUP_CONTENT, True)',
-              "                    print('Operation completed successfully')",
-              '                elif args.reset:',
-              '                    cleanup()',
-              '                    CachedConfig.delete_cache_file()',
-              '                    execute_boot_rebuild_plan(boot_plan)',
-              "                    print('Operation completed successfully')",
-              '            except boot.BootRebuildCommandError as error:',
-              '                logging.error(str(error))',
-              '                print(',
-              "                    'Boot artifact rebuild failed after system changes. '",
-              "                    'Resolve the error before rebooting.',",
-              '                    file=sys.stderr,',
-              '                )',
-              '                raise SystemExit(1) from error',
-          ]
-          new_main = '\n'.join(new_main_lines) + '\n'
-          assert old_main in text
-          text = text.replace(old_main, new_main, 1)
-          path.write_text(text)
-
-          final_lines = [
-              'name: CI', '', 'on:', '  push:', '    branches:', '      - main',
-              '  pull_request:', '    branches:', '      - main', '', 'permissions:',
-              '  contents: read', '', 'jobs:', '  test:', '    runs-on: ubuntu-latest',
-              '    steps:', '      - name: Check out repository', '        uses: actions/checkout@v7',
-              '', '      - name: Set up Python', '        uses: actions/setup-python@v7',
-              '        with:', '          python-version: "3.13"', '          cache: pip',
-              '          cache-dependency-path: requirements-dev.txt', '',
-              '      - name: Install development environment', '        run: |',
-              '          python -m pip install --upgrade pip', '          python -m pip install -e .',
-              '          python -m pip install -r requirements-dev.txt', '',
-              '      - name: Run host-safe tests', '        run: python -m pytest -v', '',
-              '      - name: Enforce branch coverage',
-              '        run: python -m pytest --cov=envycontrol --cov-branch --cov-report=term-missing', '',
-              '      - name: Ruff', '        run: ruff check envycontrol.py tests scripts', '',
-              '      - name: Mypy', '        run: mypy envycontrol.py', '',
-              '      - name: Pre-commit deterministic checks', '        run: pre-commit run --all-files', '',
-              '      - name: Run safe PR verifier', '        env:', '          RUN_MUTATION: "0"',
-              '          RUN_SYSTEM_VM: "0"', '        run: ./scripts/verify/verify-pr.sh',
-          ]
-          Path('.github/workflows/ci.yml').write_text('\n'.join(final_lines) + '\n')
-          PY
-      - name: Install test dependencies
-        run: |
+          python -m pip install --upgrade pip
           python -m pip install -e .
           python -m pip install -r requirements-dev.txt
-      - name: Verify GREEN
-        run: python -m pytest tests/test_cli.py tests/test_boot_preflight.py tests/test_initramfs.py tests/test_host_safety.py tests/test_modes.py -v
-      - name: Static checks
-        run: |
-          ruff check envycontrol.py envycontrol_boot.py tests/test_cli.py
-          mypy envycontrol.py envycontrol_boot.py
-      - name: Commit implementation and restore CI
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add envycontrol.py .github/workflows/ci.yml
-          git commit -m 'fix: fail boot preflight before cache mutation'
-          git push origin HEAD:feat/boot-rebuild-backends
+
+      - name: Run host-safe tests
+        run: python -m pytest -v
+
+      - name: Enforce branch coverage
+        run: python -m pytest --cov=envycontrol --cov=envycontrol_boot --cov-branch --cov-report=term-missing
+
+      - name: Ruff
+        run: ruff check envycontrol.py envycontrol_boot.py tests scripts
+
+      - name: Mypy
+        run: mypy envycontrol.py envycontrol_boot.py
+
+      - name: Pre-commit deterministic checks
+        run: pre-commit run --all-files
+
+      - name: Run safe PR verifier
+        env:
+          RUN_MUTATION: "0"
+          RUN_SYSTEM_VM: "0"
+        run: ./scripts/verify/verify-pr.sh
