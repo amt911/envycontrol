@@ -69,3 +69,14 @@ def test_vm_guard_accepts_all_three_independent_gates(tmp_path):
     assert result.returncode == 0
     assert "kvm" in result.stdout
     assert "sentinel" in result.stdout.lower()
+
+
+def test_executable_guard_rejects_attempted_path_or_detector_override(tmp_path):
+    sentinel = tmp_path / "sentinel"
+    sentinel.write_text("envycontrol test vm")
+    detector = _write_detector(tmp_path, "echo kvm; exit 0")
+    result = subprocess.run(
+        [str(GUARD), "1", str(sentinel), str(detector)], capture_output=True, text=True
+    )
+    assert result.returncode == 64
+    assert "no command-line overrides" in result.stderr
