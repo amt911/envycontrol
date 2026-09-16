@@ -596,6 +596,10 @@ def main():
         assert_root()
         try:
             boot_plan = resolve_boot_rebuild_plan()
+            if args.verbose:
+                logging.debug(f"Selected boot rebuild backend: {boot_plan.backend}")
+                for diagnostic in boot_plan.diagnostics:
+                    logging.debug(f"Boot preflight evidence: {diagnostic}")
         except (
             boot.NoBootBackendFoundError,
             boot.AmbiguousBootBackendError,
