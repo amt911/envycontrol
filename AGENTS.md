@@ -266,3 +266,14 @@ SOLID is a list of **symptoms to look for**, not a pattern to apply. Every one o
 - Branch names: `feat/name`, `fix/description`, `chore/task` when creating new branches.
 - Every PR must include a **How to test manually** section with exact safe commands, prerequisites and expected results.
 - PR verification must distinguish deterministic PASS from VM-required `NOT EXECUTED`; mocked host tests never substitute for destructive VM evidence.
+
+## graphify
+
+This project has a graphify knowledge graph at graphify-out/.
+
+Rules:
+
+- Before answering architecture or codebase questions, read graphify-out/GRAPH_REPORT.md for god nodes and community structure
+- If graphify-out/wiki/index.md exists, navigate it instead of reading raw files
+- For cross-module "how does X relate to Y" questions, prefer `graphify query "<question>"`, `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"` over grep — these traverse the graph's EXTRACTED + INFERRED edges instead of scanning files
+- After modifying code files in this session, run `graphify update .` to keep the graph current (AST-only, no API cost)
