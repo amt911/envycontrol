@@ -43,8 +43,17 @@ echo "==> safe CLI smoke"
 
 echo "==> packaging smoke"
 "$PYTHON" -m pip install -e .
-envycontrol --version
-"$PYTHON" -c 'import envycontrol, envycontrol_boot; assert envycontrol.VERSION == "3.5.2"'
+# The installed console entry point must report exactly what the source declares.
+# Pinning a literal here only froze the check to one release; the versions are kept
+# in step by tests/test_release_workflow.py instead.
+"$PYTHON" -c 'import envycontrol, envycontrol_boot'
+declared="$("$PYTHON" -c 'import envycontrol; print(envycontrol.VERSION)')"
+reported="$(envycontrol --version)"
+if [[ "$reported" != "$declared" ]]; then
+  echo "packaging smoke: entry point reports '$reported' but source declares '$declared'" >&2
+  exit 1
+fi
+echo "packaging smoke: envycontrol $reported"
 
 if [[ "$RUN_MUTATION" == "1" ]]; then
   echo "==> blocking mutation quality"
