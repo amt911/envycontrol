@@ -1,11 +1,11 @@
 # Graph Report - envycontrol  (2026-09-18)
 
 ## Corpus Check
-- 41 files · ~35,998 words
+- 41 files · ~36,142 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 326 nodes · 507 edges · 17 communities detected
+- 332 nodes · 515 edges · 17 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -19,13 +19,13 @@
 - [[_COMMUNITY_Community 6|Community 6]]
 - [[_COMMUNITY_Community 7|Community 7]]
 - [[_COMMUNITY_Community 8|Community 8]]
-- [[_COMMUNITY_Community 11|Community 11]]
+- [[_COMMUNITY_Community 10|Community 10]]
 - [[_COMMUNITY_Community 12|Community 12]]
 - [[_COMMUNITY_Community 13|Community 13]]
-- [[_COMMUNITY_Community 16|Community 16]]
+- [[_COMMUNITY_Community 14|Community 14]]
 - [[_COMMUNITY_Community 17|Community 17]]
 - [[_COMMUNITY_Community 18|Community 18]]
-- [[_COMMUNITY_Community 22|Community 22]]
+- [[_COMMUNITY_Community 19|Community 19]]
 - [[_COMMUNITY_Community 23|Community 23]]
 
 ## God Nodes (most connected - your core abstractions)
@@ -42,7 +42,7 @@
 
 ## Surprising Connections (you probably didn't know these)
 - `BootRebuildError` --inherits--> `RuntimeError`  [EXTRACTED]
-  envycontrol_boot.py →   _Bridges community 0 → community 18_
+  envycontrol_boot.py →   _Bridges community 0 → community 19_
 
 ## Communities
 
@@ -82,51 +82,51 @@ Nodes (5): FakeProbe, test_explicit_kernel_install_pipeline_runs_once_without_du
 Cohesion: 0.22
 Nodes (5): FakeProbe, test_known_dracut_limine_hook_is_treated_as_native_and_not_duplicated(), test_known_mkinitcpio_limine_hook_is_treated_as_native_and_not_duplicated(), test_manual_limine_configuration_without_known_native_hook_fails_preflight(), test_no_limine_configuration_requires_no_integration_stage()
 
-### Community 11 - "Community 11"
+### Community 10 - "Community 10"
+Cohesion: 0.27
+Nodes (10): The shell of the workflow step that rewrites the version, verbatim., Running the workflow's own shell must leave both files, and the CLI, on the tag., flake.nix repeats the version, so a bump that misses it ships a mislabelled pack, _stamp_script(), test_nix_package_version_matches_the_cli_version(), test_release_workflow_can_write_releases(), test_release_workflow_triggers_only_on_semver_tags(), test_release_workflow_version_rewrite_matches_the_real_version_line() (+2 more)
+
+### Community 12 - "Community 12"
 Cohesion: 0.44
 Nodes (8): _run_guard_function(), test_executable_guard_rejects_attempted_path_or_detector_override(), test_vm_guard_accepts_all_three_independent_gates(), test_vm_guard_refuses_ambiguous_virtualization_result(), test_vm_guard_refuses_bare_metal_result(), test_vm_guard_refuses_missing_opt_in(), test_vm_guard_refuses_missing_sentinel(), _write_detector()
 
-### Community 12 - "Community 12"
+### Community 13 - "Community 13"
 Cohesion: 0.24
 Nodes (3): NullProbe, test_backend_commands_preserve_supported_rebuild_contracts(), test_setup_packages_boot_runtime_module()
 
-### Community 13 - "Community 13"
+### Community 14 - "Community 14"
 Cohesion: 0.31
 Nodes (4): RecordingRunner, test_inhibit_wraps_only_an_existing_valid_stage(), test_nonzero_stage_result_raises_domain_error(), test_plan_executes_direct_command_without_inhibit()
 
-### Community 16 - "Community 16"
+### Community 17 - "Community 17"
 Cohesion: 0.54
 Nodes (6): _fake_boot_plan(), _fake_run_recorder(), test_hybrid_mode_can_generate_nvidia_current_config(), test_hybrid_mode_with_rtd3_writes_power_management_rules(), test_integrated_mode_records_expected_side_effects(), test_nvidia_mode_writes_intel_lightdm_and_optional_settings()
 
-### Community 17 - "Community 17"
+### Community 18 - "Community 18"
 Cohesion: 0.52
 Nodes (6): _run_checker(), test_checker_derives_survivors_when_export_omits_field(), test_checker_fails_below_threshold(), test_checker_passes_at_sixty_percent_excluding_timeouts(), test_checker_rejects_blocking_threshold_below_sixty(), test_checker_requires_real_mutants()
 
-### Community 18 - "Community 18"
+### Community 19 - "Community 19"
 Cohesion: 0.29
 Nodes (3): RuntimeError, Raised when a normal test tries to reach a real machine-global boundary., UnsafeHostMutation
-
-### Community 22 - "Community 22"
-Cohesion: 0.7
-Nodes (4): test_release_workflow_can_write_releases(), test_release_workflow_triggers_only_on_semver_tags(), test_release_workflow_version_rewrite_matches_the_real_version_line(), _workflow_text()
 
 ### Community 23 - "Community 23"
 Cohesion: 0.83
 Nodes (3): load_stats(), main(), _non_negative_int()
 
 ## Knowledge Gaps
-- **2 isolated node(s):** `Adapter for config from CACHE_FILE_PATH`, `Raised when a normal test tries to reach a real machine-global boundary.`
+- **5 isolated node(s):** `Adapter for config from CACHE_FILE_PATH`, `Raised when a normal test tries to reach a real machine-global boundary.`, `The shell of the workflow step that rewrites the version, verbatim.`, `Running the workflow's own shell must leave both files, and the CLI, on the tag.`, `flake.nix repeats the version, so a bump that misses it ships a mislabelled pack`
   These have ≤1 connection - possible missing edges or undocumented components.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `BootRebuildError` connect `Community 0` to `Community 18`?**
-  _High betweenness centrality (0.011) - this node is a cross-community bridge._
+- **Why does `BootRebuildError` connect `Community 0` to `Community 19`?**
+  _High betweenness centrality (0.010) - this node is a cross-community bridge._
 - **Why does `SystemProbe` connect `Community 5` to `Community 0`?**
   _High betweenness centrality (0.010) - this node is a cross-community bridge._
-- **What connects `Adapter for config from CACHE_FILE_PATH`, `Raised when a normal test tries to reach a real machine-global boundary.` to the rest of the system?**
-  _2 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `Adapter for config from CACHE_FILE_PATH`, `Raised when a normal test tries to reach a real machine-global boundary.`, `The shell of the workflow step that rewrites the version, verbatim.` to the rest of the system?**
+  _5 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.07 - nodes in this community are weakly interconnected._
 - **Should `Community 5` be split into smaller, more focused modules?**
