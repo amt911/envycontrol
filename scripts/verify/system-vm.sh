@@ -25,6 +25,13 @@ mkdir -p "$(dirname "$ENVYCONTROL_TEST_COMMAND_LOG")"
 : >"$ENVYCONTROL_TEST_COMMAND_LOG"
 PYTHON="${PYTHON:-python3}"
 
+for fixture in systemctl systemd-inhibit update-initramfs dracut dracut-rebuild mkinitcpio rpm-ostree make-initrd kernel-install ukify limine-update; do
+  if [[ ! -x "$FIXTURE_BIN/$fixture" ]]; then
+    echo "REFUSED: required VM fixture is not executable: $FIXTURE_BIN/$fixture" >&2
+    exit 66
+  fi
+done
+
 run_envy() {
   "$PYTHON" "$ROOT/envycontrol.py" "$@"
 }
@@ -53,6 +60,7 @@ assert_absent() {
 }
 
 echo "VM-only destructive verification starting. The VM/snapshot must be discarded afterwards."
+echo "INFO: this harness validates the boot pipeline selected by the prepared VM; use separate disposable images for generator-specific scenarios."
 
 run_envy --switch integrated
 assert_mode integrated
@@ -77,6 +85,6 @@ assert_absent /etc/modprobe.d/nvidia.conf
 assert_absent /etc/modprobe.d/blacklist-nvidia.conf
 
 grep -q '^systemctl ' "$ENVYCONTROL_TEST_COMMAND_LOG"
-grep -Eq '^(systemd-inhibit|update-initramfs|dracut|dracut-rebuild|mkinitcpio|rpm-ostree|make-initrd) ' "$ENVYCONTROL_TEST_COMMAND_LOG"
-echo "PASS: external system commands were intercepted by VM fixtures"
+grep -Eq '^(systemd-inhibit|update-initramfs|dracut|dracut-rebuild|mkinitcpio|rpm-ostree|make-initrd|kernel-install|ukify|limine-update) ' "$ENVYCONTROL_TEST_COMMAND_LOG"
+echo "PASS: external system commands were intercepted by VM fixtures where the selected pipeline is PATH-resolved"
 echo "PASS: destructive VM verification completed; discard/revert the disposable VM now"

@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "envycontrol.py"
+      - "envycontrol_boot.py"
       - "tests/**"
       - "scripts/**"
       - "pyproject.toml"
@@ -36,8 +37,8 @@ jobs:
           python -m pip install -e .
           python -m pip install -r requirements-dev.txt
 
-      - name: Run mutation baseline under 6 GB cgroup
-        run: ./scripts/run-mutation.sh --advisory
+      - name: Enforce mutation score under 6 GB cgroup
+        run: ./scripts/run-mutation.sh
 
       - name: Upload mutmut report
         if: always()

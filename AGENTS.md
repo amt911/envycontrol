@@ -1,13 +1,13 @@
 # EnvyControl — Agent Guide
 
-EnvyControl is a Python CLI for switching NVIDIA Optimus graphics modes on Linux. It changes machine-global graphics configuration, services and initramfs state, so development must treat host safety as a hard invariant.
+EnvyControl is a Python CLI for switching NVIDIA Optimus graphics modes on Linux. It changes machine-global graphics configuration, services and boot artifacts, so development must treat host safety as a hard invariant.
 
 ## Start here
 
 - Read this file, `docs/CLI_CONTRACT.md`, `docs/COMMAND_PERMISSIONS.md`, `docs/FACTS.md` and `docs/FINDINGS.md` before changing behavior.
-- **Never perform destructive EnvyControl verification on the developer host.** Any test that can change GPU mode, kernel-module configuration, udev, Xorg, display-manager configuration, systemd services, initramfs, `/etc`, `/usr` or `/var/cache/envycontrol` runs only in a disposable VM created for EnvyControl testing. If no valid disposable VM is available, report destructive verification as **`NOT EXECUTED`**. The real host is never a fallback.
-- Search before writing. This is a compact codebase; read `envycontrol.py`, existing tests and scripts before creating a second implementation of the same behavior.
-- Read `docs/FINDINGS.md` before debugging or changing build/test tooling. Add a finding only when it is genuinely non-obvious and not derivable from code.
+- **Never perform destructive EnvyControl verification on the developer host.** Any test that can change GPU mode, kernel-module configuration, udev, Xorg, display-manager configuration, systemd services, initramfs/UKI/bootloader state, `/etc`, `/usr` or `/var/cache/envycontrol` runs only in a disposable VM created for EnvyControl testing. If no valid disposable VM is available, report destructive verification as **`NOT EXECUTED — requires disposable VM`**. The real host is never a fallback.
+- Search before writing. Read `envycontrol.py`, `envycontrol_boot.py`, existing tests and scripts before creating a second implementation of the same behavior.
+- Read `docs/FINDINGS.md` before debugging or changing boot/build/test tooling. Add a finding only when it is genuinely non-obvious and not derivable from code.
 - Read and update `docs/FACTS.md` for verified facts that a fresh agent would otherwise have to rediscover.
 - `docs/COMMAND_PERMISSIONS.md` is authoritative for command privilege and side-effect boundaries. Update it in the same change that changes a CLI operation or system side effect.
 - If Graphify is available, run it at session start and update it after structural changes. If it is unavailable, inspect the repository directly and state that Graphify was unavailable; never invent graph output.
@@ -34,7 +34,7 @@ This file is `AGENTS.md`: the **one** instruction file for every coding agent in
 
 This rule overrides convenience, speed and confidence in cleanup.
 
-Anything capable of changing GPU mode, kernel-module configuration, udev, Xorg, a display manager, systemd services, initramfs, `/etc`, `/usr`, `/var/cache/envycontrol` or any other machine-global state **MUST run only inside a disposable virtual machine provisioned for EnvyControl testing**.
+Anything capable of changing GPU mode, kernel-module configuration, udev, Xorg, a display manager, systemd services, initramfs/UKI/bootloader state, `/etc`, `/usr`, `/var/cache/envycontrol` or any other machine-global state **MUST run only inside a disposable virtual machine provisioned for EnvyControl testing**.
 
 A destructive system-test script may proceed only when all of these gates pass:
 
@@ -42,33 +42,38 @@ A destructive system-test script may proceed only when all of these gates pass:
 2. `/etc/envycontrol-test-vm` exists as a regular file in the disposable image.
 3. `systemd-detect-virt --vm` exits successfully and reports a non-empty virtualization type other than `none`.
 
-Missing or ambiguous evidence means abort before mutation. There is no `--force-host`, `--i-know-what-im-doing`, environment bypass or equivalent escape hatch. If the VM is unavailable, the result is **`NOT EXECUTED`**, never a host run.
+Missing or ambiguous evidence means abort before mutation. There is no `--force-host`, `--i-know-what-im-doing`, environment bypass or equivalent escape hatch. If the VM is unavailable, the result is **`NOT EXECUTED — requires disposable VM`**, never a host run.
 
-Normal unit/integration tests must use controlled fakes, monkeypatching and temporary paths. They must not require root, a real NVIDIA GPU, a real display manager or a real initramfs tool.
+Normal unit/integration tests must use controlled fakes, monkeypatching and temporary paths. They must not require root, a real NVIDIA GPU, a real display manager or a real boot-rebuild tool.
 
 ## Project architecture
 
-The runtime intentionally remains small:
+The runtime has two deliberately small modules:
 
-- `envycontrol.py` — CLI, graphics-mode logic, system detection, config generation, cache adapter and initramfs selection.
-- `setup.py` — setuptools metadata and `envycontrol=envycontrol:main` console entry point.
+- `envycontrol.py` — CLI, graphics-mode logic, hardware/display-manager detection, config generation, cache adapter and integration with boot preflight/execution.
+- `envycontrol_boot.py` — boot-rebuild domain model, evidence-ranked detection, backends, resolver/coordinator, kernel-install/UKI/Limine integration and command runner.
+- `setup.py` — setuptools metadata, packages both runtime modules and exposes `envycontrol=envycontrol:main`.
 - `flake.nix` — Nix package/dev-shell definition.
 - `tests/` — host-safe pytest suite; dangerous boundaries are blocked by default.
 - `scripts/verify/` — safe smoke checks plus VM-only system verification.
 - `docs/` — observable CLI contract, command side effects and shared agent knowledge.
 
-Do not split or redesign the runtime merely because a larger architecture is fashionable. Refactors need a concrete behavioral reason and regression coverage.
+Keep boot-generator selection out of graphics-mode branches. `envycontrol.py` asks the boot coordinator for one immutable `BootRebuildPlan`; `envycontrol_boot.py` owns the selection logic. Do not reintroduce distro-hardcoded boot branches into the CLI.
 
 ## CLI and system boundaries
 
 The supported modes are `integrated`, `hybrid` and `nvidia`. Supported display-manager overrides are `gdm`, `gdm3`, `sddm` and `lightdm`. RTD3 values are `0`, `1`, `2`, `3`.
 
+`--switch` and `--reset` must keep this order: root assertion → read-only boot preflight → cache adapter/system mutations → execute the exact preflighted plan. A preflight failure must happen before cache mutation too.
+
 Treat these as dangerous boundaries unless a focused test replaces them:
 
-- filesystem writes/removals below `/etc`, `/usr` and `/var/cache/envycontrol`;
+- filesystem writes/removals below `/etc`, `/usr`, `/lib` and `/var/cache/envycontrol`;
 - `systemctl` enable/disable;
 - `dracut`, `dracut-rebuild`, `mkinitcpio`, `update-initramfs`, `rpm-ostree`, `make-initrd`;
-- `systemd-inhibit` around initramfs rebuilding;
+- Booster / `/usr/lib/booster/regenerate_images`;
+- `kernel-install`, `ukify`, `limine`, `limine-update`, `limine-entry-tool`, `limine-dracut`, `limine-mkinitcpio`;
+- `systemd-inhibit` around boot rebuilding;
 - `chmod` on generated display-manager scripts;
 - `lspci` and `xrandr` as hardware/environment discovery inputs.
 
@@ -106,16 +111,16 @@ Cap the tool's own worker concurrency too. Verify the real worker is inside the 
 
 ## Tests and quality
 
-The default automated suite is host-safe. **It must never perform destructive verification on the real system.** If a behavior requires real GPU/system mutation, its automated host test stops at mocked boundaries and the real check runs only in the disposable VM. Without that VM, record **`NOT EXECUTED`**; never use the host as fallback.
+The default automated suite is host-safe. **It must never perform destructive verification on the real system.** If a behavior requires real GPU/system mutation, its automated host test stops at mocked boundaries and the real check runs only in the disposable VM. Without that VM, record **`NOT EXECUTED — requires disposable VM`**; never use the host as fallback.
 
 Testing layers:
 
-1. unit tests for pure parsing, mode inference, config generation and cache behavior;
+1. unit tests for pure parsing, evidence ranking, mode inference, config generation and cache behavior;
 2. boundary/integration tests with filesystem/subprocess/privilege boundaries replaced;
 3. safe CLI smoke tests for non-destructive entry points such as help/version;
 4. destructive system verification only through `scripts/verify/system-vm.sh` after the VM guard passes.
 
-`tests/conftest.py` is a safety control, not an inconvenience. Do not weaken it to make a test easy.
+`tests/conftest.py` is a safety control, not an inconvenience. It blocks legacy and new boot tools, including Booster regeneration, kernel-install, ukify and Limine commands. Do not weaken it to make a test easy.
 
 ## TDD — mandatory
 
@@ -133,43 +138,37 @@ Never delete, skip or weaken a test merely to get green. A test that has never b
 
 ## Coverage gate
 
-Use branch coverage. The project floor is **80%** for the measured executable scope; critical pure logic targets **90% or higher**. Do not lower the threshold to ship. Exclusions must be narrow, adjacent to a written project-specific reason, and must not hide testable behavior.
+Use branch coverage over **both** `envycontrol.py` and `envycontrol_boot.py`. The project floor is **80%** for the measured executable scope; critical pure logic targets **90% or higher**. Do not lower the threshold to ship. Exclusions must be narrow, adjacent to a written project-specific reason, and must not hide testable behavior.
 
 Coverage answers whether code ran, not whether assertions are meaningful; mutation and property tests complement it.
 
 ## Property-based testing
 
-Use Hypothesis where invariants are stronger than a list of examples, especially PCI parsing/conversion, stable generated configuration and mode-inference invariants. Strategies must generate valid domain values, not arbitrary shell fragments.
+Use Hypothesis where invariants are stronger than a list of examples, especially PCI parsing/conversion, stable generated configuration, evidence ordering and mode-inference invariants. Strategies must generate valid domain values, not arbitrary shell fragments.
 
 ## Mutation gate
 
-Use `mutmut` over meaningful core logic. Measure a real baseline before recording a threshold.
+Use `mutmut` over **both runtime modules**. The blocking threshold is **60%** and is a ratchet; never lower it to make a change pass.
 
-Current measured baseline (2026-09-16, `mutmut 3.8.0`):
+Measured combined baseline (2026-09-16, `mutmut 3.8.0`):
 
-- 533 killed, 369 survived, 0 timeouts, 0 skipped, 902 total mutants;
-- mutation score: **59.09%**;
-- policy: **advisory** because the measured score is below the non-negotiable 60% floor.
+- 878 killed, 523 survived, 1 no-tests, 0 timeouts, 0 skipped, 1402 total mutants;
+- checker mutation score: **62.67%**;
+- policy: **blocking** in GitHub Actions and local pre-push verification.
 
-Until a fresh mutation run reaches at least **60%**, the next feature or behavior-changing change **MUST NOT be declared complete**. Do not lower the floor, exclude meaningful core logic, or reclassify timeouts/survivors to manufacture a passing score.
+Do not exclude meaningful production code, reclassify survivors/timeouts or weaken assertions to manufacture a passing score. Surviving mutants are killed with stronger independently specified observable assertions. Review `KILLED`, `SURVIVED`, `NO_TESTS` and timeouts separately.
 
-- Once blocking, **60% is the absolute floor**.
-- The threshold is a ratchet: it can stay or rise, never fall to make a push pass.
-- If the measured baseline is below 60%, report the real score/date as advisory and treat reaching 60% as debt before the next feature is considered complete.
-- Review `KILLED`, `SURVIVED`, `NO_COVERAGE` and timeouts separately.
-- A surviving mutant is fixed by stronger observable assertions, not by recomputing expected values with the implementation's own expression.
-
-Mutation runs are heavy jobs and must use the 6 GB cgroup.
+Mutation runs are heavy jobs and must use the 6 GB cgroup. The mutmut sandbox must include `setup.py` because packaging tests run inside it.
 
 ## Real-environment verification
 
-In-process tests cannot prove that EnvyControl changes a real Linux graphics stack correctly. That evidence comes from a disposable test VM.
+In-process tests cannot prove that EnvyControl changes a real Linux graphics/boot stack correctly. That evidence comes from a disposable test VM.
 
-`./scripts/verify/require-disposable-vm.sh` is the mandatory first gate for destructive verification. `./scripts/verify/system-vm.sh` must call it before any mutation.
+`./scripts/verify/require-disposable-vm.sh` is the mandatory first gate for destructive verification. `./scripts/verify/system-vm.sh` calls it before any mutation. `tests/system/README.md` defines the generator matrix for mkinitcpio, dracut with mkinitcpio still installed, Booster, kernel-install/UKI and Limine.
 
-The real-environment script verifies externally observable behavior such as exit codes, generated files, service-command logs and mode-query state. Prefer discarding/reverting the VM snapshot after each run over trusting cleanup.
+PATH fixtures can intercept PATH-resolved commands, but **Booster uses the absolute path `/usr/lib/booster/regenerate_images`**. Real Booster verification therefore requires a purpose-built disposable VM; do not pretend a PATH fixture proves it.
 
-**Never run destructive verification on the developer host.** If the guard cannot positively prove the disposable VM, abort and report **`NOT EXECUTED`**. The host is never a fallback, even when it is a supported Linux distribution or the agent believes cleanup is reversible.
+Prefer discarding/reverting the VM snapshot after each scenario over trusting cleanup. If the guard cannot positively prove the disposable VM, abort and report **`NOT EXECUTED — requires disposable VM`**. The host is never a fallback.
 
 ## Debugging discipline
 
@@ -183,21 +182,21 @@ Environment/performance claims are measurements, not intuition. Record timings o
 
 ## Agentic PR verification
 
-Every PR should receive an agentic verification verdict before merge. The verifier is advisory and **never merges**.
+Every PR should receive an agentic verification verdict before merge. The verifier is advisory about the human merge decision but its deterministic quality checks are blocking project gates. It **never merges**.
 
 It must:
 
 1. inspect the diff and relevant spec/contract;
 2. run safe host-side lint/tests/coverage;
-3. inspect mutation/security results where applicable;
-4. use the disposable VM for any scenario that changes machine-global graphics/system state;
+3. enforce mutation/security results where applicable;
+4. use the disposable VM for any scenario that changes machine-global graphics/system/boot state;
 5. report CLI output, exit status and expected VM filesystem/service effects;
 6. report missing regressions or undocumented behavior;
 7. post a readable verdict and wait for the human decision.
 
 The verdict also reads structure: name any new [SOLID](#design-principles--solid-applied-with-judgement) violation the diff introduces — a growing `if`/`elif` chain, IO leaking into a decision function, a speculative interface — as a finding, not a veto.
 
-**The verifier must never perform destructive testing on the current workstation.** If no valid disposable VM is available, VM-required cases are **`NOT EXECUTED`**. It must not fall back to the host or claim PASS from mocked tests.
+**The verifier must never perform destructive testing on the current workstation.** If no valid disposable VM is available, VM-required cases are **`NOT EXECUTED — requires disposable VM`**. It must not fall back to the host or claim PASS from mocked tests.
 
 ## Agent orchestration
 
@@ -209,7 +208,7 @@ Plans should carry contracts and exact names, not unverified code presented as a
 
 ## Reuse first
 
-Before creating a helper, script, fixture or abstraction, search `envycontrol.py`, `tests/` and `scripts/` by name and behavior.
+Before creating a helper, script, fixture or abstraction, search `envycontrol.py`, `envycontrol_boot.py`, `tests/` and `scripts/` by name and behavior.
 
 - Extend/parameterize behavior that shares a reason to change; do not clone it.
 - Two occurrences may remain explicit. At the third true duplicate, extract and migrate all call sites in the same change.
@@ -244,13 +243,14 @@ SOLID is a list of **symptoms to look for**, not a pattern to apply. Every one o
 
 ## Working rules
 
-- **VM-only destructive verification is non-negotiable.** GPU switching, initramfs rebuilds, systemd/service changes and machine-global file mutations run only in the disposable VM. Without it: **`NOT EXECUTED`**; never host fallback.
+- **VM-only destructive verification is non-negotiable.** GPU switching, boot rebuilds, kernel-install/UKI/Limine operations, systemd/service changes and machine-global file mutations run only in the disposable VM. Without it: **`NOT EXECUTED — requires disposable VM`**; never host fallback.
 - TDD is mandatory for new logic and bug fixes.
 - Run full/heavy jobs inside the 6 GB memory cgroup.
 - `AGENTS.md` is canonical; `CLAUDE.md` is a one-line shim (`@AGENTS.md`) for Claude Code. Edit rules only in `AGENTS.md` — see [Agent compatibility](#agent-compatibility--codex-and-claude-code).
 - **SOLID where it pays, not by rote** — split `envycontrol.py` functions by reason to change, extend distro/mode/display-manager handling through a lookup table instead of a growing `if`/`elif` chain, and keep IO (subprocess, filesystem, hardware probes) behind a seam the CLI entry point wires. No abstraction without a second implementation, an IO boundary or a test seam. See [Design principles](#design-principles--solid-applied-with-judgement).
 - Preserve `setup.py` and the console entry point unless a separately approved packaging migration says otherwise.
 - Keep runtime dependencies minimal; test/development tools do not belong in `setup.py` runtime requirements.
+- Keep boot-generator selection in `envycontrol_boot.py`; the CLI consumes a preflighted plan.
 - Update `docs/CLI_CONTRACT.md` when observable CLI behavior changes.
 - Update `docs/COMMAND_PERMISSIONS.md` in the same change as privilege/side-effect behavior.
 - Never invent coverage, mutation, timing, VM or hardware results.
@@ -265,7 +265,7 @@ SOLID is a list of **symptoms to look for**, not a pattern to apply. Every one o
 - **Never merge** branches or PRs. The user decides merges.
 - Branch names: `feat/name`, `fix/description`, `chore/task` when creating new branches.
 - Every PR must include a **How to test manually** section with exact safe commands, prerequisites and expected results.
-- PR verification must distinguish deterministic PASS from VM-required `NOT EXECUTED`; mocked host tests never substitute for destructive VM evidence.
+- PR verification must distinguish deterministic PASS from VM-required `NOT EXECUTED — requires disposable VM`; mocked host tests never substitute for destructive VM evidence.
 
 ## graphify
 

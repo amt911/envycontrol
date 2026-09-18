@@ -5,8 +5,9 @@ import os
 import re
 import subprocess
 import sys
-import shutil
 from contextlib import contextmanager
+
+import envycontrol_boot as boot
 
 # begin constants definition
 
@@ -229,7 +230,9 @@ RTD3_MODES = [0, 1, 2, 3]
 # end constants definition
 
 
-def graphics_mode_switcher(graphics_mode, user_display_manager, enable_force_comp, coolbits_value, rtd3_value, use_nvidia_current):
+def graphics_mode_switcher(graphics_mode, user_display_manager, enable_force_comp, coolbits_value, rtd3_value, use_nvidia_current, boot_plan=None):
+    if boot_plan is None:
+        boot_plan = resolve_boot_rebuild_plan()
     print(f"Switching to {graphics_mode} mode")
 
     if graphics_mode == 'integrated':
@@ -254,7 +257,6 @@ def graphics_mode_switcher(graphics_mode, user_display_manager, enable_force_com
         # power off the Nvidia GPU with udev rules
         create_file(UDEV_INTEGRATED_PATH, UDEV_INTEGRATED)
 
-        rebuild_initramfs()
     elif graphics_mode == 'hybrid':
         print(
             f"Enable PCI-Express Runtime D3 (RTD3) Power Management: {rtd3_value or False}")
@@ -286,7 +288,6 @@ def graphics_mode_switcher(graphics_mode, user_display_manager, enable_force_com
                 create_file(MODESET_PATH, MODESET_RTD3.format(rtd3_value))
             create_file(UDEV_PM_PATH, UDEV_PM_CONTENT)
 
-        rebuild_initramfs()
     elif graphics_mode == 'nvidia':
         print(f"Enable ForceCompositionPipeline: {enable_force_comp}")
         print(f"Enable Coolbits: {coolbits_value or False}")
@@ -353,7 +354,7 @@ def graphics_mode_switcher(graphics_mode, user_display_manager, enable_force_com
                         generate_xrandr_script(igpu_vendor), True)
             create_file(LIGHTDM_CONFIG_PATH, LIGHTDM_CONFIG_CONTENT)
 
-        rebuild_initramfs()
+    execute_boot_rebuild_plan(boot_plan)
     print('Operation completed successfully')
     print('Please reboot your computer for changes to take effect!')
 
@@ -483,50 +484,24 @@ def get_amd_igpu_name():
         return None
 
 
+def resolve_boot_rebuild_plan():
+    probe = boot.LocalSystemProbe()
+    return boot.default_boot_rebuild_coordinator().resolve(probe)
+
+
+def execute_boot_rebuild_plan(plan):
+    plan.execute(
+        boot.SubprocessCommandRunner(),
+        verbose=logging.getLogger().level == logging.DEBUG,
+    )
+
+
 def rebuild_initramfs():
-    # OSTree systems first
-    if any(os.path.exists(dir) for dir in ['/ostree', '/sysroot/ostree']):
-        print('Rebuilding the initramfs with rpm-ostree...')
-        command = ['rpm-ostree', 'initramfs', '--enable', '--arg=--force']
+    plan = resolve_boot_rebuild_plan()
+    print('Rebuilding boot artifacts...')
+    execute_boot_rebuild_plan(plan)
+    print('Successfully rebuilt boot artifacts!')
 
-    # Debian and Ubuntu derivatives
-    elif os.path.exists('/etc/debian_version'):
-        command = ['update-initramfs', '-u', '-k', 'all']
-    # RHEL and SUSE derivatives
-    elif os.path.exists('/etc/redhat-release') or os.path.exists('/usr/bin/zypper'):
-        command = ['dracut', '--force', '--regenerate-all']
-    # EndeavourOS with dracut
-    elif os.path.exists('/usr/lib/endeavouros-release') and os.path.exists('/usr/bin/dracut'):
-        command = ['dracut-rebuild']
-    # ALT Linux
-    elif os.path.exists('/etc/altlinux-release'):
-        command = ['make-initrd']
-    # Arch Linux
-    elif os.path.exists('/etc/arch-release'):
-        command = ['mkinitcpio', '-P']
-    else:
-        command = []
-
-    if shutil.which("systemd-inhibit"):
-        command = [
-            'systemd-inhibit',
-            '--who=envycontrol',
-            '--why', 'Rebuilding initramfs',
-            '--',
-            *command
-        ]
-
-    if len(command) != 0:
-        print('Rebuilding the initramfs...')
-        if logging.getLogger().level == logging.DEBUG:
-            p = subprocess.run(command)
-        else:
-            p = subprocess.run(
-                command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        if p.returncode == 0:
-            print('Successfully rebuilt the initramfs!')
-        else:
-            logging.error("An error ocurred while rebuilding the initramfs")
 
 
 def create_file(path, content, executable=False):
@@ -616,24 +591,50 @@ def main():
         CachedConfig.show_cache_file()
         return
 
+    boot_plan = None
+    if args.switch or args.reset:
+        assert_root()
+        try:
+            boot_plan = resolve_boot_rebuild_plan()
+            if args.verbose:
+                logging.debug(f"Selected boot rebuild backend: {boot_plan.backend}")
+                for diagnostic in boot_plan.diagnostics:
+                    logging.debug(f"Boot preflight evidence: {diagnostic}")
+        except (
+            boot.NoBootBackendFoundError,
+            boot.AmbiguousBootBackendError,
+            boot.UnsupportedBootIntegrationError,
+        ) as error:
+            logging.error(str(error))
+            print('No system files were modified.', file=sys.stderr)
+            raise SystemExit(1) from error
+
     if args.switch or args.reset_sddm or args.reset:
         with CachedConfig(args).adapter():
-            if args.switch:
-                assert_root()
-                graphics_mode_switcher(
-                    args.switch, args.dm,
-                    args.force_comp, args.coolbits, args.rtd3, args.use_nvidia_current
+            try:
+                if args.switch:
+                    graphics_mode_switcher(
+                        args.switch, args.dm,
+                        args.force_comp, args.coolbits, args.rtd3, args.use_nvidia_current,
+                        boot_plan=boot_plan,
+                    )
+                elif args.reset_sddm:
+                    assert_root()
+                    create_file(SDDM_XSETUP_PATH, SDDM_XSETUP_CONTENT, True)
+                    print('Operation completed successfully')
+                elif args.reset:
+                    cleanup()
+                    CachedConfig.delete_cache_file()
+                    execute_boot_rebuild_plan(boot_plan)
+                    print('Operation completed successfully')
+            except boot.BootRebuildCommandError as error:
+                logging.error(str(error))
+                print(
+                    'Boot artifact rebuild failed after system changes. '
+                    'Resolve the error before rebooting.',
+                    file=sys.stderr,
                 )
-            elif args.reset_sddm:
-                assert_root()
-                create_file(SDDM_XSETUP_PATH, SDDM_XSETUP_CONTENT, True)
-                print('Operation completed successfully')
-            elif args.reset:
-                assert_root()
-                cleanup()
-                CachedConfig.delete_cache_file()
-                rebuild_initramfs()
-                print('Operation completed successfully')
+                raise SystemExit(1) from error
 
 
 class CachedConfig:

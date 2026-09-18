@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 import envycontrol
+from conftest import DANGEROUS_RUN_COMMANDS
 
 
 def test_real_etc_write_is_blocked():
@@ -18,6 +19,35 @@ def test_real_systemctl_is_blocked():
 def test_real_lspci_is_blocked():
     with pytest.raises(RuntimeError, match="blocked host discovery command: lspci"):
         envycontrol.subprocess.check_output(["lspci"])
+
+
+def test_new_boot_tools_are_classified_as_dangerous_before_execution():
+    required = {
+        "booster",
+        "regenerate_images",
+        "kernel-install",
+        "ukify",
+        "limine",
+        "limine-update",
+        "limine-entry-tool",
+        "limine-dracut",
+        "limine-mkinitcpio",
+    }
+    assert required <= DANGEROUS_RUN_COMMANDS
+
+
+@pytest.mark.parametrize(
+    ("command", "name"),
+    [
+        (["/usr/lib/booster/regenerate_images"], "regenerate_images"),
+        (["/usr/bin/kernel-install", "add-all"], "kernel-install"),
+        (["/usr/bin/ukify", "build", "--linux", "/boot/vmlinuz-linux"], "ukify"),
+        (["/usr/bin/limine-update"], "limine-update"),
+    ],
+)
+def test_new_boot_tool_execution_is_blocked_even_by_absolute_path(command, name):
+    with pytest.raises(RuntimeError, match=rf"blocked dangerous command: {name}"):
+        envycontrol.subprocess.run(command)
 
 
 def test_tmp_path_write_is_allowed(tmp_path):
@@ -41,7 +71,12 @@ def test_mode_switch_can_replace_dangerous_boundaries_with_fakes(monkeypatch):
         "create_file",
         lambda path, content, executable=False: files.append((path, content, executable)),
     )
-    monkeypatch.setattr(envycontrol, "rebuild_initramfs", lambda: calls.append(("initramfs",)))
+
+    class FakePlan:
+        def execute(self, runner, verbose=False):
+            calls.append(("initramfs",))
+
+    monkeypatch.setattr(envycontrol, "resolve_boot_rebuild_plan", lambda: FakePlan())
 
     envycontrol.graphics_mode_switcher("integrated", None, False, None, None, False)
 

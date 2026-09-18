@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 import envycontrol
+import envycontrol_boot as boot
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -111,21 +112,69 @@ def test_main_cache_delete_checks_root_and_dispatches(monkeypatch):
     assert [entry[0] for entry in calls] == ["root", "cache-delete"]
 
 
-def test_main_switch_dispatches_inside_cache_adapter(monkeypatch):
+def test_main_switch_preflights_before_cache_adapter(monkeypatch):
     calls = []
+    plan = object()
     _install_fake_cached_config(monkeypatch, calls)
     monkeypatch.setattr(sys, "argv", ["envycontrol", "--switch", "integrated"])
     monkeypatch.setattr(envycontrol, "assert_root", lambda: calls.append(("root",)))
     monkeypatch.setattr(
         envycontrol,
+        "resolve_boot_rebuild_plan",
+        lambda: calls.append(("preflight",)) or plan,
+    )
+    monkeypatch.setattr(
+        envycontrol,
         "graphics_mode_switcher",
-        lambda *args: calls.append(("switch",) + args),
+        lambda *args, **kwargs: calls.append(("switch", args, kwargs)),
     )
 
     envycontrol.main()
 
     labels = [entry[0] for entry in calls]
-    assert labels == ["cached-init", "adapter-enter", "root", "switch", "adapter-exit"]
+    assert labels == [
+        "root",
+        "preflight",
+        "cached-init",
+        "adapter-enter",
+        "switch",
+        "adapter-exit",
+    ]
+    assert calls[4][2]["boot_plan"] is plan
+
+
+def test_main_switch_reports_ambiguous_preflight_before_cache_adapter(
+    monkeypatch, caplog, capsys
+):
+    calls = []
+    _install_fake_cached_config(monkeypatch, calls)
+    monkeypatch.setattr(sys, "argv", ["envycontrol", "--switch", "integrated"])
+    monkeypatch.setattr(envycontrol, "assert_root", lambda: calls.append(("root",)))
+
+    def fail_preflight():
+        raise boot.AmbiguousBootBackendError(
+            "Multiple boot rebuild backends have equally strong evidence: "
+            "dracut: active dracut pacman hook; "
+            "mkinitcpio: active mkinitcpio pacman hook"
+        )
+
+    monkeypatch.setattr(envycontrol, "resolve_boot_rebuild_plan", fail_preflight)
+    monkeypatch.setattr(
+        envycontrol,
+        "graphics_mode_switcher",
+        lambda *args, **kwargs: calls.append(("switch",)),
+    )
+
+    with caplog.at_level(logging.ERROR), pytest.raises(SystemExit) as exc:
+        envycontrol.main()
+
+    captured = capsys.readouterr()
+    assert exc.value.code == 1
+    assert "dracut" in caplog.text
+    assert "mkinitcpio" in caplog.text
+    assert "No system files were modified." in captured.err
+    assert "Operation completed successfully" not in captured.out
+    assert calls == [("root",)]
 
 
 def test_main_reset_sddm_dispatches_inside_cache_adapter(monkeypatch):
@@ -152,23 +201,62 @@ def test_main_reset_sddm_dispatches_inside_cache_adapter(monkeypatch):
     )
 
 
-def test_main_reset_dispatches_cleanup_cache_and_initramfs(monkeypatch):
+def test_main_reset_preflights_before_cache_adapter_and_reuses_plan(monkeypatch):
     calls = []
     _install_fake_cached_config(monkeypatch, calls)
     monkeypatch.setattr(sys, "argv", ["envycontrol", "--reset"])
     monkeypatch.setattr(envycontrol, "assert_root", lambda: calls.append(("root",)))
     monkeypatch.setattr(envycontrol, "cleanup", lambda: calls.append(("cleanup",)))
-    monkeypatch.setattr(envycontrol, "rebuild_initramfs", lambda: calls.append(("initramfs",)))
+    monkeypatch.setattr(
+        envycontrol,
+        "rebuild_initramfs",
+        lambda: calls.append(("legacy-rebuild",)),
+    )
+
+    class FakePlan:
+        def execute(self, runner, verbose=False):
+            calls.append(("boot",))
+
+    monkeypatch.setattr(
+        envycontrol,
+        "resolve_boot_rebuild_plan",
+        lambda: calls.append(("preflight",)) or FakePlan(),
+    )
 
     envycontrol.main()
 
     labels = [entry[0] for entry in calls]
     assert labels == [
+        "root",
+        "preflight",
         "cached-init",
         "adapter-enter",
-        "root",
         "cleanup",
         "cache-delete",
-        "initramfs",
+        "boot",
         "adapter-exit",
     ]
+    assert "legacy-rebuild" not in labels
+
+
+def test_main_reset_preflight_failure_happens_before_cache_adapter(
+    monkeypatch, caplog, capsys
+):
+    calls = []
+    _install_fake_cached_config(monkeypatch, calls)
+    monkeypatch.setattr(sys, "argv", ["envycontrol", "--reset"])
+    monkeypatch.setattr(envycontrol, "assert_root", lambda: calls.append(("root",)))
+    monkeypatch.setattr(envycontrol, "cleanup", lambda: calls.append(("cleanup",)))
+
+    def fail_preflight():
+        raise boot.NoBootBackendFoundError("No supported initramfs generator detected")
+
+    monkeypatch.setattr(envycontrol, "resolve_boot_rebuild_plan", fail_preflight)
+
+    with caplog.at_level(logging.ERROR), pytest.raises(SystemExit) as exc:
+        envycontrol.main()
+
+    assert exc.value.code == 1
+    assert "No supported initramfs generator" in caplog.text
+    assert "No system files were modified." in capsys.readouterr().err
+    assert calls == [("root",)]

@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     branches:
-      - add-claude-md
+      - main
   pull_request:
     branches:
       - main
@@ -35,13 +35,13 @@ jobs:
         run: python -m pytest -v
 
       - name: Enforce branch coverage
-        run: python -m pytest --cov=envycontrol --cov-branch --cov-report=term-missing
+        run: python -m pytest --cov=envycontrol --cov=envycontrol_boot --cov-branch --cov-report=term-missing
 
       - name: Ruff
-        run: ruff check envycontrol.py tests scripts
+        run: ruff check envycontrol.py envycontrol_boot.py tests scripts
 
       - name: Mypy
-        run: mypy envycontrol.py
+        run: mypy envycontrol.py envycontrol_boot.py
 
       - name: Pre-commit deterministic checks
         run: pre-commit run --all-files

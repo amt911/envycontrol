@@ -11,6 +11,14 @@ def _fake_run_recorder(monkeypatch, calls, returncode=0):
     )
 
 
+def _fake_boot_plan(monkeypatch, calls):
+    class FakePlan:
+        def execute(self, runner, verbose=False):
+            calls.append(("initramfs",))
+
+    monkeypatch.setattr(envycontrol, "resolve_boot_rebuild_plan", lambda: FakePlan())
+
+
 def test_integrated_mode_records_expected_side_effects(monkeypatch):
     calls = []
     files = []
@@ -21,7 +29,7 @@ def test_integrated_mode_records_expected_side_effects(monkeypatch):
         "create_file",
         lambda path, content, executable=False: files.append((path, content, executable)),
     )
-    monkeypatch.setattr(envycontrol, "rebuild_initramfs", lambda: calls.append(("initramfs",)))
+    _fake_boot_plan(monkeypatch, calls)
 
     envycontrol.graphics_mode_switcher("integrated", None, False, None, None, False)
 
@@ -46,7 +54,7 @@ def test_hybrid_mode_with_rtd3_writes_power_management_rules(monkeypatch):
         "create_file",
         lambda path, content, executable=False: files.append((path, content, executable)),
     )
-    monkeypatch.setattr(envycontrol, "rebuild_initramfs", lambda: calls.append(("initramfs",)))
+    _fake_boot_plan(monkeypatch, calls)
 
     envycontrol.graphics_mode_switcher("hybrid", None, False, None, 2, False)
 
@@ -65,7 +73,7 @@ def test_hybrid_mode_can_generate_nvidia_current_config(monkeypatch):
         "create_file",
         lambda path, content, executable=False: files.append((path, content, executable)),
     )
-    monkeypatch.setattr(envycontrol, "rebuild_initramfs", lambda: None)
+    _fake_boot_plan(monkeypatch, [])
 
     envycontrol.graphics_mode_switcher("hybrid", None, False, None, None, True)
 
@@ -84,7 +92,7 @@ def test_nvidia_mode_writes_intel_lightdm_and_optional_settings(monkeypatch):
         "create_file",
         lambda path, content, executable=False: files.append((path, content, executable)),
     )
-    monkeypatch.setattr(envycontrol, "rebuild_initramfs", lambda: calls.append(("initramfs",)))
+    _fake_boot_plan(monkeypatch, calls)
 
     envycontrol.graphics_mode_switcher("nvidia", "lightdm", True, 7, None, False)
 

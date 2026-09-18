@@ -8,6 +8,8 @@ SMOKE = ROOT / "scripts" / "verify" / "smoke-cli.sh"
 SYSTEM_VM = ROOT / "scripts" / "verify" / "system-vm.sh"
 VERIFY_PR = ROOT / "scripts" / "verify" / "verify-pr.sh"
 MUTATION = ROOT / "scripts" / "run-mutation.sh"
+VM_FIXTURE_BIN = ROOT / "tests" / "system" / "fixtures" / "bin"
+VM_README = ROOT / "tests" / "system" / "README.md"
 
 
 def test_safe_smoke_script_passes_without_privileged_operations():
@@ -39,6 +41,21 @@ def test_system_vm_guard_runs_before_mutating_commands():
     guard_index = next(i for i, line in enumerate(lines) if "require-disposable-vm.sh" in line)
     first_envy_index = next(i for i, line in enumerate(lines) if '"$PYTHON" "$ROOT/envycontrol.py"' in line)
     assert guard_index < first_envy_index
+
+
+def test_vm_harness_has_executable_fixtures_for_path_resolved_new_tools():
+    for name in ("kernel-install", "ukify", "limine-update"):
+        fixture = VM_FIXTURE_BIN / name
+        assert fixture.is_file()
+        assert os.access(fixture, os.X_OK)
+
+
+def test_vm_docs_require_separate_disposable_generator_scenarios():
+    text = VM_README.read_text()
+    assert "Arch + dracut with mkinitcpio still installed" in text
+    assert "Arch + Booster" in text
+    assert "/usr/lib/booster/regenerate_images" in text
+    assert "NOT EXECUTED — requires disposable VM" in text
 
 
 def test_mutation_runner_resolves_mutmut_before_sudo_systemd_boundary():
