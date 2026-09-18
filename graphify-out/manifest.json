@@ -1,0 +1,238 @@
+{
+  "/home/andres/repos/envycontrol/envycontrol.py": {
+    "mtime": 1789746304.6268876,
+    "hash": "928de8aad156fc4bdbe9455004047bd0"
+  },
+  "/home/andres/repos/envycontrol/envycontrol_boot.py": {
+    "mtime": 1789746304.6270945,
+    "hash": "d9142ad74b3262781d891a489b20c0cb"
+  },
+  "/home/andres/repos/envycontrol/setup.py": {
+    "mtime": 1789746304.6270947,
+    "hash": "afafefc74ab3d4e63d3f5483da1f8b62"
+  },
+  "/home/andres/repos/envycontrol/scripts/check_mutation_score.py": {
+    "mtime": 1789743575.0502946,
+    "hash": "ca9ef6fb3088be8c3873c7f9b963c2b3"
+  },
+  "/home/andres/repos/envycontrol/tests/test_cache.py": {
+    "mtime": 1789743575.0512948,
+    "hash": "dc40e654993b0eb44c63f8055ec772af"
+  },
+  "/home/andres/repos/envycontrol/tests/test_configuration_generation.py": {
+    "mtime": 1789743575.0512948,
+    "hash": "05b3d24bc709d67dd730d7d08669ad2a"
+  },
+  "/home/andres/repos/envycontrol/tests/test_detection.py": {
+    "mtime": 1789743575.0512948,
+    "hash": "edb4fd74f9bae4587886027d5934d78a"
+  },
+  "/home/andres/repos/envycontrol/tests/test_mutation_score.py": {
+    "mtime": 1789743575.0512948,
+    "hash": "45135a1c6d17f407fc6c54d6e9f01a85"
+  },
+  "/home/andres/repos/envycontrol/tests/test_properties.py": {
+    "mtime": 1789743575.0512948,
+    "hash": "4fecbdd492be512784d3ec590658ec8f"
+  },
+  "/home/andres/repos/envycontrol/tests/test_vm_guard.py": {
+    "mtime": 1789743575.0512948,
+    "hash": "aac21449ff1d829246066120c45b0de5"
+  },
+  "/home/andres/repos/envycontrol/tests/test_agent_docs.py": {
+    "mtime": 1789746099.070304,
+    "hash": "7375a94831addecfd6fd2a46ec6646e6"
+  },
+  "/home/andres/repos/envycontrol/tests/conftest.py": {
+    "mtime": 1789746304.6270947,
+    "hash": "7a29b5d117885fc827e38d1522446866"
+  },
+  "/home/andres/repos/envycontrol/tests/test_boot_backends.py": {
+    "mtime": 1789746304.6270947,
+    "hash": "b2841f388d962e5d23ff2aac282bc06e"
+  },
+  "/home/andres/repos/envycontrol/tests/test_boot_detection.py": {
+    "mtime": 1789746304.6270947,
+    "hash": "94399b5916953ccd88248d81d96d1506"
+  },
+  "/home/andres/repos/envycontrol/tests/test_boot_plan.py": {
+    "mtime": 1789746304.6270947,
+    "hash": "2c44564886b3458326cdd9f8b85ccf0a"
+  },
+  "/home/andres/repos/envycontrol/tests/test_boot_preflight.py": {
+    "mtime": 1789746304.6270947,
+    "hash": "182e649a954fdbd0b8637299cdf32fbc"
+  },
+  "/home/andres/repos/envycontrol/tests/test_boot_probe.py": {
+    "mtime": 1789746304.6270947,
+    "hash": "d5ae777addbde02937a75811b8a22d6d"
+  },
+  "/home/andres/repos/envycontrol/tests/test_boot_resolver.py": {
+    "mtime": 1789746304.6270947,
+    "hash": "658a8d1f33490be7b6ebf38ee6f19b1c"
+  },
+  "/home/andres/repos/envycontrol/tests/test_boot_verbose.py": {
+    "mtime": 1789746304.6283398,
+    "hash": "898d6007122ad7768862552cd2f51c57"
+  },
+  "/home/andres/repos/envycontrol/tests/test_cli.py": {
+    "mtime": 1789746304.6283398,
+    "hash": "f6138c1d3c960a084bb0a3a3bae5c144"
+  },
+  "/home/andres/repos/envycontrol/tests/test_host_safety.py": {
+    "mtime": 1789746304.6283398,
+    "hash": "6a5d312499c694c8d46af5df67b50fc2"
+  },
+  "/home/andres/repos/envycontrol/tests/test_initramfs.py": {
+    "mtime": 1789746304.6283398,
+    "hash": "672d727b95edc98454bd925a37350b92"
+  },
+  "/home/andres/repos/envycontrol/tests/test_kernel_install.py": {
+    "mtime": 1789746304.6283398,
+    "hash": "179776c3e528d8eb2d8d0a9c01f68310"
+  },
+  "/home/andres/repos/envycontrol/tests/test_limine_integration.py": {
+    "mtime": 1789746304.6283398,
+    "hash": "9d454d8a79ed8017e0d91db5a3c0f027"
+  },
+  "/home/andres/repos/envycontrol/tests/test_modes.py": {
+    "mtime": 1789746304.6283398,
+    "hash": "c2dd8a563f66bcf0cd66a780b783ed46"
+  },
+  "/home/andres/repos/envycontrol/tests/test_quality_policy.py": {
+    "mtime": 1789746304.6283398,
+    "hash": "80d16e8fe65262229791aedabdf9080c"
+  },
+  "/home/andres/repos/envycontrol/tests/test_verify_scripts.py": {
+    "mtime": 1789746304.6283398,
+    "hash": "9925e19fbdf9776ec1186dbbebc9593a"
+  },
+  "/home/andres/repos/envycontrol/tests/test_release_workflow.py": {
+    "mtime": 1789746562.498519,
+    "hash": "b5de4e5349542268f59b482f37969a2c"
+  },
+  "/home/andres/repos/envycontrol/tests/system/fixtures/bin/dracut": {
+    "mtime": 1789743575.051174,
+    "hash": "e6c78d40e81a8bb6cb75dbf5f9d661c6"
+  },
+  "/home/andres/repos/envycontrol/tests/system/fixtures/bin/dracut-rebuild": {
+    "mtime": 1789743575.0512722,
+    "hash": "c14dc5372e18231dd21bfe0d4f0a5e29"
+  },
+  "/home/andres/repos/envycontrol/tests/system/fixtures/bin/lspci": {
+    "mtime": 1789743575.0512722,
+    "hash": "4372aa4fa934837857eb2a4c0ea7d3f6"
+  },
+  "/home/andres/repos/envycontrol/tests/system/fixtures/bin/make-initrd": {
+    "mtime": 1789743575.0512722,
+    "hash": "dc0403d8828e1d2a299e9dd7df727240"
+  },
+  "/home/andres/repos/envycontrol/tests/system/fixtures/bin/mkinitcpio": {
+    "mtime": 1789743575.0512722,
+    "hash": "66cb647d4cd546422b582d13e19c35a6"
+  },
+  "/home/andres/repos/envycontrol/tests/system/fixtures/bin/rpm-ostree": {
+    "mtime": 1789743575.0512722,
+    "hash": "08ff3025f12cc5cd18201553e0e9ff71"
+  },
+  "/home/andres/repos/envycontrol/tests/system/fixtures/bin/systemctl": {
+    "mtime": 1789743575.0512722,
+    "hash": "df162544bf2b78c70e54bb33298e3aa4"
+  },
+  "/home/andres/repos/envycontrol/tests/system/fixtures/bin/systemd-inhibit": {
+    "mtime": 1789743575.0512722,
+    "hash": "54b23b4ed2840e57be75fac31d0746cc"
+  },
+  "/home/andres/repos/envycontrol/tests/system/fixtures/bin/update-initramfs": {
+    "mtime": 1789743575.0512948,
+    "hash": "305396bef6d6909909bbc222b794ffb7"
+  },
+  "/home/andres/repos/envycontrol/tests/system/fixtures/bin/xrandr": {
+    "mtime": 1789743575.0512948,
+    "hash": "e191907799811aab82ba31673336f264"
+  },
+  "/home/andres/repos/envycontrol/tests/system/fixtures/bin/kernel-install": {
+    "mtime": 1789746304.6270947,
+    "hash": "ce61b1881be3a3aaff0365529027898c"
+  },
+  "/home/andres/repos/envycontrol/tests/system/fixtures/bin/limine-update": {
+    "mtime": 1789746304.6270947,
+    "hash": "a1a3c08477086394e4b9f9495635dd62"
+  },
+  "/home/andres/repos/envycontrol/tests/system/fixtures/bin/ukify": {
+    "mtime": 1789746304.6270947,
+    "hash": "2a36d686b3812f26f238784d7012c176"
+  },
+  "/home/andres/repos/envycontrol/requirements-dev.txt": {
+    "mtime": 1789743575.0492947,
+    "hash": "456796eb5e6f713d33faa658eccd157e"
+  },
+  "/home/andres/repos/envycontrol/README.md": {
+    "mtime": 1789746099.069304,
+    "hash": "9f68baae6c49dad6229953b9b9d22a0e"
+  },
+  "/home/andres/repos/envycontrol/CLAUDE.md": {
+    "mtime": 1789746207.9317849,
+    "hash": "307b64186a3f19759d07eeb37dd281a2"
+  },
+  "/home/andres/repos/envycontrol/AGENTS.md": {
+    "mtime": 1789746304.6258543,
+    "hash": "32cf180ddf93e97be62e6cc92bc2a73e"
+  },
+  "/home/andres/repos/envycontrol/docs/TEMPLATE_MIGRATION.md": {
+    "mtime": 1789743575.0492947,
+    "hash": "a82ba4d0b2efde4470d4f3fef4d1eb38"
+  },
+  "/home/andres/repos/envycontrol/docs/USER_STORIES.md": {
+    "mtime": 1789743575.0492947,
+    "hash": "7beb3cdb785856b48b1f9bff844c76f2"
+  },
+  "/home/andres/repos/envycontrol/docs/PROMPT_TEMPLATES.md": {
+    "mtime": 1789746099.070304,
+    "hash": "6ca26898b32b53d9f297df3e0c43fc51"
+  },
+  "/home/andres/repos/envycontrol/docs/CLI_CONTRACT.md": {
+    "mtime": 1789746304.6258543,
+    "hash": "b0160a548ab23c620222be299bbc7bc1"
+  },
+  "/home/andres/repos/envycontrol/docs/COMMAND_PERMISSIONS.md": {
+    "mtime": 1789746304.6258543,
+    "hash": "3511db5bdac16b60c6f106e818a5d5f6"
+  },
+  "/home/andres/repos/envycontrol/docs/FACTS.md": {
+    "mtime": 1789746304.6258543,
+    "hash": "fb8c8f98cf4fb760c4a75fbdd950ffcb"
+  },
+  "/home/andres/repos/envycontrol/docs/FINDINGS.md": {
+    "mtime": 1789746304.6260946,
+    "hash": "5cb22acf6e85e09542bd3b1bb6f1a295"
+  },
+  "/home/andres/repos/envycontrol/docs/superpowers/specs/2026-09-16-agentic-development-foundation-design.md": {
+    "mtime": 1789549243.3520384,
+    "hash": "0149200d22d6dc353dfbe0366c2865d2"
+  },
+  "/home/andres/repos/envycontrol/docs/superpowers/specs/2026-09-16-boot-rebuild-backends-design.md": {
+    "mtime": 1789746304.6268876,
+    "hash": "547f52e789ef7d2770cbc8be67ccb543"
+  },
+  "/home/andres/repos/envycontrol/docs/superpowers/plans/2026-09-16-agentic-development-foundation.md": {
+    "mtime": 1789743575.0492947,
+    "hash": "13efe2f78963ed57fef069d86028ad75"
+  },
+  "/home/andres/repos/envycontrol/docs/superpowers/plans/2026-09-16-boot-rebuild-backends.md": {
+    "mtime": 1789746304.626774,
+    "hash": "63049714acac761dfbb82dc8e98f1fd3"
+  },
+  "/home/andres/repos/envycontrol/tests/system/README.md": {
+    "mtime": 1789746304.6270947,
+    "hash": "8917f5783580a2d9efac32f23603e79d"
+  },
+  "/home/andres/repos/envycontrol/logos/dark.png": {
+    "mtime": 1789547819.814347,
+    "hash": "ab62aec4f2c300d26fa711f6b763c127"
+  },
+  "/home/andres/repos/envycontrol/logos/light.png": {
+    "mtime": 1789547819.81477,
+    "hash": "c46b1cab8c419fd35e2a95c2e544844d"
+  }
+}

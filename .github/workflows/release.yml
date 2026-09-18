@@ -24,6 +24,7 @@ jobs:
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
           sed -i "s/^VERSION = .*/VERSION = '${VERSION}'/" envycontrol.py
+          sed -i "s/^\\( *\\)version = \".*\";/\\1version = \"${VERSION}\";/" flake.nix
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       # sed reports success even when it matches nothing, so the stamp is verified

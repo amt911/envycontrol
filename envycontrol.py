@@ -11,7 +11,7 @@ import envycontrol_boot as boot
 
 # begin constants definition
 
-VERSION = '3.5.2'
+VERSION = '3.6.0'
 
 # Note: Do NOT remove this in cleanup!
 CACHE_FILE_PATH = '/var/cache/envycontrol/cache.json'

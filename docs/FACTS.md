@@ -4,7 +4,7 @@ Verified working memory for agents. One fact per line; facts must include how an
 
 ## Architecture and packaging
 
-- `envycontrol.py` declares `VERSION = '3.5.2'` and owns the CLI, graphics-mode operations, cache behavior and integration with boot preflight/execution. *(verified: source + CI packaging smoke, 2026-09-16)*
+- `envycontrol.py` declares `VERSION = '3.6.0'` and owns the CLI, graphics-mode operations, cache behavior and integration with boot preflight/execution. `flake.nix` repeats the same version and `tests/test_release_workflow.py` keeps the two in step. *(verified: source + `pytest tests/test_release_workflow.py`, 2026-09-18)*
 - `envycontrol_boot.py` owns the boot-rebuild domain model, evidence-ranked backend detection, resolver/coordinator, kernel-install/UKI/Limine handling and subprocess command runner. *(verified: source and boot-domain tests, 2026-09-16)*
 - `setup.py` packages both `envycontrol` and `envycontrol_boot` and exposes `envycontrol=envycontrol:main`. Runtime packaging declares no third-party install requirements. *(verified: `setup.py` plus editable-install CI smoke, 2026-09-16)*
 
