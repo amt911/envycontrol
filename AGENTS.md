@@ -94,7 +94,7 @@ Modes:
 
 - **lite mode** — user explicitly disables Superpowers until they say `normal mode`.
 - **normal mode** — default; at most one implementation agent writes at a time. A read-only reviewer may overlap when it cannot race on shared mutable state.
-- **modo desatendido** — reasonable decisions may be made without waiting, and feature branches/PRs may be pushed/opened if the environment permits. Hard limits remain: never merge, never push directly to the default/protected branch, never force-push.
+- **modo desatendido** — reasonable decisions may be made without waiting, and feature branches/PRs may be pushed/opened if the environment permits. Hard limits remain: never merge, never push directly to the default/protected branch, never force-push. **Pace** (2026-10-04): intermediate tasks run only the tests of what they touched (`python -m pytest -q tests/<file>`, `-k <expr>`); commits pile up locally and the branch is pushed **once, at the end**, after the full host suite and, where it applies, the VM verification. Each intermediate push paid the whole gate to report nothing the next one would not.
 
 User instructions outrank skills. This file defines project constraints that skills must respect.
 
@@ -119,6 +119,22 @@ Testing layers:
 2. boundary/integration tests with filesystem/subprocess/privilege boundaries replaced;
 3. safe CLI smoke tests for non-destructive entry points such as help/version;
 4. destructive system verification only through `scripts/verify/system-vm.sh` after the VM guard passes.
+
+**The pyramid per feature** (claude-md template, 2026-10-04): a new behaviour gets its edge cases in
+layers 1-2, at most one safe CLI smoke in layer 3 per main journey, and **one** VM scenario only when
+it needs the real system (generator regeneration, a real mode switch). The VM check says in its
+header why the mocked boundary is not enough. Existing tests are not migrated for this rule.
+
+**Running the suites — the slow ones once at the end, only the reds in between:**
+
+- While working, only the tests of what you touched: `python -m pytest -q tests/<file>` or `-k <expr>`.
+- The full host suite, and `scripts/verify/system-vm.sh` when the change needs it, run **once, at the
+  end of the branch, alone** — nothing else using the same VM — while you write the PR.
+- Red pass → only the reds (`python -m pytest -q --lf`) until green or proven red on the base commit
+  too; then **one** full confirmation pass.
+- Three reds in a row on one test → stop and read the evidence (the assertion, the captured
+  subprocess call, the VM log) before a fourth change. No fixed `sleep`s — wait on the state.
+- Heavy runs under `timeout --kill-after=60s <limit>`, inside the memory cgroup above.
 
 `tests/conftest.py` is a safety control, not an inconvenience. It blocks legacy and new boot tools, including Booster regeneration, kernel-install, ukify and Limine commands. Do not weaken it to make a test easy.
 
